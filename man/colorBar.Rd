@@ -8,9 +8,11 @@ colorBar(
   lut,
   min,
   max = -min,
-  nticks = 11,
+  nticks = 4,
   ticks = seq(min, max, len = nticks),
-  title = ""
+  title = "",
+  ylab = "",
+  las = 1
 )
 }
 \arguments{
@@ -31,11 +33,8 @@ colorBar(
 \item{las}{argument passed to par.}
 }
 \value{
-a niftiImage object of the coefficient image
+plots a colorbar
 }
 \description{
 Can be used in combination with layout and image.statMap to create figures.
-}
-\details{
-Returns a statistical niftiImage object from a statMap object
 }

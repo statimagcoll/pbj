@@ -59,8 +59,8 @@ Suggests:
     lmtest,
     pain21,
     rmarkdown,
-    R.rsp,
     sandwich,
     testthat
-Remotes: simonvandekar/pain21
-VignetteBuilder: R.rsp
+Remotes:
+  simonvandekar/pain21,
+  spisakt/pTFCE

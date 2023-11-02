@@ -280,21 +280,20 @@ plotData.statMap = function(x, emForm=NULL, method='CEI', cft_s=NULL, cft_p=NULL
 #'
 #' Can be used in combination with layout and image.statMap to create figures.
 #'
-#' Returns a statistical niftiImage object from a statMap object
 #' @param lut the range of colors to display
 #' @param min Where to put the minimum tick mark.
 #' @param max Where to put the maximum tick mark.
 #' @param nticks Number of ticks on the color bar.
 #' @param ticks Locations for ticks.
+#' @param title The title for the color bar
 #' @param ylab label for the color bar.
 #' @param las argument passed to par.
-#' @param title The title for the color bar
-#' @return a niftiImage object of the coefficient image
+#' @return plots a colorbar
 #' @importFrom graphics axis rect
 #' @export
-colorBar <- function(lut, min, max=-min, nticks=4, ticks=seq(min, max, len=nticks), title='', ylab='', las=1) {
+colorBar <- function(lut, min, max=-min, nticks=4, ticks=seq(min, max, len=nticks), title='', ylab='', las=1){
   scale = (length(lut)-1)/(max-min)
-  plot(c(0,10), c(min,max), type='n', bty='n', xaxt='n', xlab='', yaxt='n', ylab='', main=title)
+  plot(c(0,10), c(min,max), type='n', bty='n', xaxt='n', xlab='', yaxt='n', ylab=ylab, main=title)
   axis(2, round(ticks, 2), las=las, font=2)
   title(ylab=ylab, font=2)
   for (i in 1:(length(lut)-1)) {
