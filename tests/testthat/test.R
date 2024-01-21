@@ -116,7 +116,7 @@ test_that("Output from PBJ with df=1 and scalar weights matches output from lmte
   expect_equal(statmap$coef[,1], coefficients(model)[-1], tolerance=tol )
   expect_equal(statmap$stat[1], waldtestres$F[2], tolerance=tol)
   expect_equal(dim(statmap$sqrtSigma$res), c(21, 4))
-  })
+})
 
 # voxel-wise weights df=1
 # test_that("Output from PBJ with df=1 and image weights matches output from lmtest and sandwich packages.", {
@@ -393,7 +393,7 @@ test_that("Output from PBJ with df=1 and scalar weights matches output from lm."
 # pbjtest = pbjSEI(statmap, nboot = 5, method='independence')
 
 
-### TEST FOR LONGITUDINAL MODELS ###
+### TEST FOR LONGITUDINAL MODELS INDEPENDENT###
 test_that("Output from PBJ with df=3 and scalar weights matches output from gee.", {
 
   # first install and restart
@@ -444,3 +444,73 @@ test_that("Output from PBJ with df=3 and scalar weights matches output from gee.
   expect_equal(statmap$coef[,1], coefficients(model)[-1], tolerance=tol )
   expect_equal(statmap$stat[1], geepackanova$X2, tolerance=tol)
 })
+
+
+
+### TEST FOR LONGITUDINAL MODELS EXCHANGEABLE ###
+test_that("Output from PBJ with df=3 and scalar weights matches output from gee.", {
+
+  # first install and restart
+  library(pain21)
+  library(testthat)
+  library(lmtest)
+  library(sandwich)
+  library(splines)
+  library(geepack)
+  #devtools::load_all('./')
+
+  # setting up
+  set.seed(1234)
+  pain = pain21::pain21()
+  pain$data$group = factor(sample(1:4, size = nrow(pain$data), replace=TRUE))
+  pain$data$x = rnorm(nrow(pain$data))
+  # pain$data$Winv = runif(nrow(pain$data))
+  pain$data$W = 1/runif(nrow(pain$data))
+  # creates a fake ID variable
+  pain$data$ID = c(rep(1:10, each=2), 11)
+  #debug(lmPBJ)
+  # test by comparing one voxel to results obtained by lmtest and sandwich packages
+  imgs = simplify2array(RNifti::readNifti(pain$data$images))
+  Winvs = simplify2array(RNifti::readNifti(pain$data$varimages))
+  mask = RNifti::readNifti(pain$mask) * c(apply(imgs!=0, 1:3, all))
+
+  # get one voxel
+  testvox = which(mask==1, arr.ind = TRUE)[1:4,]
+  mask[,,] = 0
+  mask[testvox] = 1
+
+  # use R functions from sandwich and lmtest
+  pain$data$y = imgs[testvox[1,1], testvox[1,2], testvox[1,3], ]
+  pain$data$Winv.img = Winvs[testvox[1,1], testvox[1,2], testvox[1,3], ]
+
+  # a series of tests to see if my code matches standard R output
+  # Y = simplify2array(RNifti::readNifti(images))
+  # ndims = length(dim(mask))
+  # if(zeros){
+  #   mask = mask * c(apply(Y!=0, 1:ndims, all))
+  # }
+  # Y = t(apply(Y, (ndims+1), function(x) x[mask!=0]))
+
+  # original
+  model = geepack::geeglm(y ~ group, id = ID, data=pain$data, weights = pain$data$W,
+                          control = geese.control(maxit=1), family = gaussian,
+                          corstr = "exchangeable")
+  model.red = geepack::geeglm(y ~ 1, id = ID, data=pain$data, weights = pain$data$W,
+                              control = geese.control(maxit=1), family = gaussian,
+                              corstr = "exchangeable")
+  geepackanova = geepack:::anova.geeglm(model, model.red)
+  # pbj methods
+  statmap <- lmPBJ(images = pain$data$images, form = ~ group,
+                   formred = ~1, mask = mask, id=pain$data$ID,
+                   template=pain$template, data = pain$data,  W = pain$data$W, robust = TRUE,
+                   zeros=TRUE, transform='none', HC3 = FALSE, W_structure = "exchangeable")
+
+  expect_equal(statmap$sqrtSigma$coef0[,1], coefficients(model)[-1], tolerance=10^-5, check.names = FALSE)
+  # expect_equal(statmap$sqrtSigma$rho[1], model$geese$alpha, tolerance=1e-1, check.names = FALSE)
+  # expect_equal(statmap$stat[1], geepackanova$X2, tolerance=10^-5)
+})
+
+
+
+
+

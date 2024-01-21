@@ -50,7 +50,8 @@ Imports:
   RNifti,
   scales,
   sandwich,
-  utils
+  utils,
+  Matrix
 RoxygenNote: 7.2.3
 Suggests: 
     fslr,

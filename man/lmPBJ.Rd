@@ -12,6 +12,7 @@ lmPBJ(
   id = NULL,
   data = NULL,
   W = NULL,
+  W_structure = "independent",
   Winv = NULL,
   template = NULL,
   formImages = NULL,
@@ -43,6 +44,8 @@ are matrices then this can be NULL.}
 
 \item{W}{Numeric vector of weights for regression model. Can be used to deweight noisy
 observations. Same as what should be passed to lm.}
+
+\item{W_structure}{The working correlation structure if id is provided. "independent" and "exchangeable" are accepted.}
 
 \item{Winv}{Inverse weights for regression model. Inverse of W.}
 
@@ -93,7 +96,6 @@ pbjModel1 = lmPBJ(images=pdata$images, form=~1, formred=~0, W = pdata$n,
                   mask=pain$mask, data=pdata, template = pain$template)
 pbjModel1
 
-
 # image(pbjModel1, index=5:15, nrow=2)
 # image(pbjModel1)
 # par(mfrow=c(1,2))
@@ -104,6 +106,12 @@ pbjModel1
 # fitting regression of images onto study sample size, weights proportional to study sample size
 pbjModel2 = lmPBJ(images=pdata$images, form=~n, formred=~1, W = pdata$n, mask=pain$mask, data=pdata)
 pbjModel2
+
+# fitting intercept only model with ID and exchangeable working correlation structure
+pbjModel3 = lmPBJ(images=pdata$images, form=~1, formred=~0, W = pdata$n,
+                  id = c(rep(1:10, each=2), 11), W_structure = "exchangeable",
+                  robust = , mask=pain$mask, data=pdata, template = pain$template)
+pbjModel3
 }
 \keyword{bootstrap}
 \keyword{bootstrap,}
