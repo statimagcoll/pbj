@@ -95,7 +95,17 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, r
   # arguments passed to statistic function
   statArgs = list(...)
   # add mask file if it's required for statistic function
+  statFormals = formalArgs(statistic)
+  for(arg in statFormals[ statFormals %in% names(sqrtSigma)  ]){
+    statArgs[[ arg ]] = sqrtSigma[[arg]]
+  }
   if(any(grepl('mask', formalArgs(statistic)))) statArgs$mask = mask
+
+  # same idea, but for other parameters
+  # loop above does this automatically for all statistic arguments
+  # if(any(grepl('df', formalArgs(statistic)))) statArgs$df = df
+  # if(any(grepl('n', formalArgs(statistic)))) statArgs$n = n
+  # if(any(grepl('rdf', formalArgs(statistic)))) statArgs$rdf = rdf
   statArgs$stat = stat
   obsstat = do.call(statistic, statArgs)
   rois  = if('rois' %in% names(formals(statistic))){
@@ -178,8 +188,8 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, r
                #     rois[[ind]][is.na(rois[[ind]][,,])] = 0
                #   }
                # }
-               list(obsStat=obsstat, unadjCDF=unadjCDF, fwerCDF=fwerCDF, ROIs=rois)},
-             bootstrap=list(obsStat=obsstat, boots=boots) )
+               list(obsStat=obsstat, unadjCDF=unadjCDF, fwerCDF=fwerCDF, ROIs=rois, statArgs=statArgs)},
+             bootstrap=list(obsStat=obsstat, boots=boots, statArgs=statArgs) )
   class(out) = c('pbj', 'list')
   statMap$pbj = out
   return(statMap)

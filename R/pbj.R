@@ -163,3 +163,79 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
   }
   res
 }
+
+
+#' Performs one bootstrap for RESI confidence set construction
+#'
+#' @param stat bootstrap value of the test statistic image. It is a nifti image array.
+#' @param res The RESI estimate computed in the observed data.
+#' @param n The sample size/ number of independent sampling units.
+#' @param df Numerator degrees of freedom
+#' @param rdf Denominator degrees of freedom
+#' @param normMethod The value used to normalize the test statistic in each
+#'  bootstrap. "param" means it's estimated assuming the test
+#'  statistic if F-distributed. "1" means no scaling. "1" is the default.
+#' @param mask Mask image identifying where measurements were taken in the image.
+#' @export
+#'
+resics <- function(stat, res, n, df, rdf, normMethod=c( '1', 'param'), mask){
+  # This is S hat
+  #stat <- RESI::chisq2S(stat[mask!=0], df, N)
+  # This is the test statistic in the mask
+  lambda_b = stat[mask!=0]
+  # This is S tilde squared
+  stat = lambda_b/n
+  w_max <- c()
+  w_min <- c()
+
+  if(normMethod == 1){
+    SD <- 1
+    boots <- stat - res
+    w_max <- max(boots)
+    w_min <- min(boots)
+  }
+
+  if(normMethod == "param"){
+    # The estimated variance of the test statistic
+    # SNV: Looks right to me
+    varStildeSq <- (df/n)^2 *(2*((df + lambda_b)^2 + (df + 2*lambda_b)*(rdf - 2))*((rdf/df)^2) / ((rdf - 2)^2 * (rdf - 4)))
+    # this is the standard error of the test statistic
+    SD_b <- sqrt(varStildeSq)
+    boots <- stat - res
+    boots <- boots / SD_b
+    w_max <- max(boots)
+    w_min <- min(boots)
+  }
+  # returns max and min across the image
+  return(c(w_min,w_max))
+}
+
+
+#' Uses bootstrap results to construct simultaneous confidence intervals.
+#'
+#' @param statmap The statMap object returned by lmPBJ using the `resics` function.
+#' @param alpha The function returns 1-alpha simultaneous confidence intervals.
+#'  @export
+#'
+sci <- function(statmap, alpha){
+  a <- do.call(rbind, statmap$pbj$boots)
+  w_min_vec <- a[,1]
+  w_max_vec <- a[,2]
+  n <- statmap$sqrtSigma$n
+  # the observed test statistic image
+  lambda <- statmap$stat
+  res = lambda/n
+  df <- statmap$sqrtSigma$df
+  rdf <- statmap$sqrtSigma$rdf
+  cu <- quantile(w_max_vec, 1 - alpha / 2)
+  cl <- quantile(w_min_vec, alpha / 2)
+
+  if(normMethod == 1){
+    SD <- 1
+  } else  if(normMethod == "param"){
+    # The estimated standard error of the test statistic
+    SD <- 2 * sqrt((df/n)^2 *((df + lambda)^2 + (df + 2*lambda)*(rdf - 2))*(rdf/df)^2 / (rdf - 2)^2 / (rdf - 4)  )
+  }
+  statmap$SCI <- data.frame('SLCI'=res - cu*SD, 'SUCI' = res - cl*SD)
+  return(statmap)
+}
