@@ -218,6 +218,7 @@ resics <- function(stat, res, n, df, rdf, normMethod=c( '1', 'param'), mask){
 #'  @export
 #'
 sci <- function(statmap, alpha){
+  normMethod = statmap$pbj$statArgs$normMethod
   a <- do.call(rbind, statmap$pbj$boots)
   w_min_vec <- a[,1]
   w_max_vec <- a[,2]
