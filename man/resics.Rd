@@ -4,12 +4,12 @@
 \alias{resics}
 \title{Performs one bootstrap for RESI confidence set construction}
 \usage{
-resics(stat, res, n, df, rdf, normMethod = c("1", "param"), mask)
+resics(stat, ShatSq, n, df, rdf, normMethod = c("1", "param"), mask)
 }
 \arguments{
 \item{stat}{bootstrap value of the test statistic image. It is a nifti image array.}
 
-\item{res}{The RESI estimate computed in the observed data.}
+\item{ShatSq}{The RESI estimate computed in the observed data.}
 
 \item{n}{The sample size/ number of independent sampling units.}
 

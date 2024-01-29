@@ -168,7 +168,7 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
 #' Performs one bootstrap for RESI confidence set construction
 #'
 #' @param stat bootstrap value of the test statistic image. It is a nifti image array.
-#' @param res The RESI estimate computed in the observed data.
+#' @param ShatSq The RESI estimate computed in the observed data.
 #' @param n The sample size/ number of independent sampling units.
 #' @param df Numerator degrees of freedom
 #' @param rdf Denominator degrees of freedom
@@ -178,7 +178,7 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
 #' @param mask Mask image identifying where measurements were taken in the image.
 #' @export
 #'
-resics <- function(stat, res, n, df, rdf, normMethod=c( '1', 'param'), mask){
+resics <- function(stat, ShatSq, n, df, rdf, normMethod=c( '1', 'param'), mask){
   # This is S hat
   #stat <- RESI::chisq2S(stat[mask!=0], df, N)
   # This is the test statistic in the mask
@@ -190,7 +190,7 @@ resics <- function(stat, res, n, df, rdf, normMethod=c( '1', 'param'), mask){
 
   if(normMethod == 1){
     SD <- 1
-    boots <- stat - res
+    boots <- stat - ShatSq
     w_max <- max(boots)
     w_min <- min(boots)
   }
@@ -201,7 +201,7 @@ resics <- function(stat, res, n, df, rdf, normMethod=c( '1', 'param'), mask){
     varStildeSq <- (df/n)^2 *(2*((df + lambda_b)^2 + (df + 2*lambda_b)*(rdf - 2))*((rdf/df)^2) / ((rdf - 2)^2 * (rdf - 4)))
     # this is the standard error of the test statistic
     SD_b <- sqrt(varStildeSq)
-    boots <- stat - res
+    boots <- stat - ShatSq
     boots <- boots / SD_b
     w_max <- max(boots)
     w_min <- min(boots)
