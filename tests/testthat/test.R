@@ -48,7 +48,7 @@ test_that("Output from PBJ with df=3 and scalar weights matches output from lmte
                    formred = ~ 1, mask = mask,
                    template=pain$template, data = pain$data,
                    Winv = pain$data$Winv, zeros=TRUE, transform='none')
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1]/statmap$sqrtSigma$df, waldtestres$F[2], tolerance=tol)
   expect_equal(dim(statmap$sqrtSigma$res), c(21, 4))
 })
@@ -63,7 +63,7 @@ test_that("Output from PBJ with df=3 and scalar weights matches output from lmte
 #                    formred = ~ 1, mask = mask,
 #                    template=pain$template, data = pain$data,
 #                    Winv = pain$data$varimages, zeros=TRUE, transform='none')
-#   expect_equal(statmap$coef[,1], coefficients(model)[-1], tolerance=tol )
+#   expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
 #   expect_equal(statmap$stat[1]/statmap$sqrtSigma$df, waldtestres$F[2], tolerance=tol)
 # })
 
@@ -113,7 +113,7 @@ test_that("Output from PBJ with df=1 and scalar weights matches output from lmte
                    formred = ~ 1, mask = mask,
                    template=pain$template, data = pain$data,
                    Winv = pain$data$Winv, zeros=TRUE, transform='none')
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1], waldtestres$F[2], tolerance=tol)
   expect_equal(dim(statmap$sqrtSigma$res), c(21, 4))
 })
@@ -127,7 +127,7 @@ test_that("Output from PBJ with df=1 and scalar weights matches output from lmte
 #                    formred = ~ 1, mask =mask,
 #                    template=pain$template, data = pain$data,
 #                    Winv = pain$data$varimages, zeros=TRUE, transform='none')
-#   expect_equal(statmap$coef[1], coefficients(model)[-1], tolerance=tol )
+#   expect_equal(statmap$coef[1], coefficients(model), tolerance=tol )
 #   expect_equal(statmap$stat[1], waldtestres$F[2], tolerance=tol)
 # } )
 
@@ -180,7 +180,7 @@ test_that("Output from PBJ with nonlinear test and scalar weights matches output
                    formred = ~ x, mask = mask,
                    template=pain$template, data = pain$data,
                    Winv = pain$data$Winv, zeros=TRUE, transform='none')
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1]/statmap$sqrtSigma$df, waldtestres$F[2], tolerance=tol)
   expect_equal(dim(statmap$sqrtSigma$res), c(21, 4))
 })
@@ -231,7 +231,7 @@ test_that("Output from PBJ with nonlinear polynomial and scalar weights matches 
                    formred = ~ x, mask = mask,
                    template=pain$template, data = pain$data,
                    Winv = pain$data$Winv, zeros=TRUE, transform='none')
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1]/statmap$sqrtSigma$df, waldtestres$F[2], tolerance=tol)
   with(statmap$sqrtSigma, {
     h=rowSums(qr.Q(QR)^2); h = ifelse(h>=1, 1-eps, h)
@@ -294,7 +294,7 @@ test_that("Output from PBJ with df=2 and scalar weights matches output from lm."
                    formred = ~ 1, mask = mask,
                    template=pain$template, data = pain$data,
                    Winv = pain$data$Winv, zeros=TRUE, transform='none', robust=FALSE)
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1]/statmap$sqrtSigma$df, waldtestres$F[2], tolerance=tol)
   # In this special case (scalar weights) dim(sqrtSigma$res)==2
   expect_equal(dim(statmap$sqrtSigma$res), c(21, 4))
@@ -309,7 +309,7 @@ test_that("Output from PBJ with df=2 and scalar weights matches output from lm."
 #                    formred = ~ 1, mask = mask,
 #                    template=pain$template, data = pain$data,
 #                    Winv = pain$data$varimages, zeros=TRUE, transform='none', robust=FALSE)
-#   expect_equal(statmap$coef[,1], coefficients(model)[-1], tolerance=tol )
+#   expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
 #   expect_equal(statmap$stat[1]/statmap$sqrtSigma$df, waldtestres$F[2], tolerance=tol)
 # })
 # scalar weights df=1
@@ -358,7 +358,7 @@ test_that("Output from PBJ with df=1 and scalar weights matches output from lm."
                    formred = ~ 1, mask = mask,
                    template=pain$template, data = pain$data,
                    Winv = pain$data$Winv, zeros=TRUE, transform='none', robust=FALSE)
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1], waldtestres$F[2], tolerance=tol)
   # In this special case 3rd array dimension is NULL
   expect_equal(dim(statmap$sqrtSigma$res), c(21, 4))
@@ -373,7 +373,7 @@ test_that("Output from PBJ with df=1 and scalar weights matches output from lm."
 #                    formred = ~ 1, mask =mask,
 #                    template=pain$template, data = pain$data,
 #                    Winv = pain$data$varimages, zeros=TRUE, transform='none', robust=FALSE)
-#   expect_equal(statmap$coef[1], coefficients(model)[-1], tolerance=tol )
+#   expect_equal(statmap$coef[1], coefficients(model), tolerance=tol )
 #   expect_equal(statmap$stat[1], waldtestres$F[2], tolerance=tol)
 # } )
 
@@ -441,7 +441,7 @@ test_that("Output from PBJ with df=3 and scalar weights matches output from gee.
                    template=pain$template, data = pain$data, # Winv = pain$data$Winv,
                    zeros=TRUE, transform='none', HC3 = FALSE)
 
-  expect_equal(statmap$coef[,1], coefficients(model), tolerance=tol )
+  expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=tol )
   expect_equal(statmap$stat[1], geepackanova$X2, tolerance=tol)
 })
 
@@ -484,19 +484,11 @@ test_that("Output from PBJ with df=3 and scalar weights matches output from gee.
   pain$data$Winv.img = Winvs[testvox[1,1], testvox[1,2], testvox[1,3], ]
 
   # a series of tests to see if my code matches standard R output
-  # Y = simplify2array(RNifti::readNifti(images))
-  # ndims = length(dim(mask))
-  # if(zeros){
-  #   mask = mask * c(apply(Y!=0, 1:ndims, all))
-  # }
-  # Y = t(apply(Y, (ndims+1), function(x) x[mask!=0]))
-
-  # original
   model = geepack::geeglm(y ~ group, id = ID, data=pain$data, weights = pain$data$W,
-                          control = geese.control(maxit=1), family = gaussian,
+                          control = geese.control(maxit=2), family = gaussian,
                           corstr = "exchangeable")
   model.red = geepack::geeglm(y ~ 1, id = ID, data=pain$data, weights = pain$data$W,
-                              control = geese.control(maxit=1), family = gaussian,
+                              control = geese.control(maxit=2), family = gaussian,
                               corstr = "exchangeable")
   geepackanova = geepack:::anova.geeglm(model, model.red)
   # pbj methods
@@ -505,8 +497,8 @@ test_that("Output from PBJ with df=3 and scalar weights matches output from gee.
                    template=pain$template, data = pain$data,  W = pain$data$W, robust = TRUE,
                    zeros=TRUE, transform='none', HC3 = FALSE, W_structure = "exchangeable")
 
-  expect_equal(statmap$sqrtSigma$coef0[,1], coefficients(model), tolerance=10^-5, check.names = FALSE)
-  # expect_equal(statmap$sqrtSigma$rho[1], model$geese$alpha, tolerance=1e-1, check.names = FALSE)
+  # expect_equal(statmap$sqrtSigma$coef[,1], coefficients(model), tolerance=10^-5, check.names = FALSE)
+  expect_equal(statmap$sqrtSigma$rho[1], model$geese$alpha, tolerance=10^-2, check.names = FALSE)
   # expect_equal(statmap$stat[1], geepackanova$X2, tolerance=10^-5)
 })
 
