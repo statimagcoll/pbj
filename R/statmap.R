@@ -62,24 +62,25 @@ bluecyan = colorRampPalette(c('blue', 'cyan'), space='Lab')
 write.statMap <- function(x, outdir, images=TRUE, sqrtSigma=TRUE, statMethod=c('p', 'S', 'chisq')){
   statMethod = tolower(statMethod[1])
   statimg  = file.path(outdir, paste0('stat_', statMethod, '.nii.gz') )
-  coefimg   = file.path(outdir, 'coef.nii.gz')
+  # coefimg   = file.path(outdir, 'coef.nii.gz')
   res   = file.path(outdir, 'sqrtSigma.rds')
   if(is.character(x$stat)){
     if(images){
       file.copy(x$stat, statimg)
       file.copy(x$sqrtSigma, res)
-      file.copy(x$coef, coefimg)
+      # file.copy(x$sqrtSigma$coef, coefimg)
     }
   } else {
     if(images){
       message('Writing stat and coef images.')
       dir.create(outdir, showWarnings=FALSE, recursive=TRUE)
       writeNifti(stat.statMap(x, method = statMethod), statimg)
-      writeNifti(coef.statMap(x), coefimg)
+      # writeNifti(coef.statMap(x), coefimg)
     }
 
     if(sqrtSigma){
       message('Writing sqrtSigma object.')
+      x$sqrtSigma$coef = coef.statMap(x)
       saveRDS(x$sqrtSigma, file = res)
     }
   }
@@ -111,7 +112,7 @@ write.statMap <- function(x, outdir, images=TRUE, sqrtSigma=TRUE, statMethod=c('
       inference[[infType]] = c(pmapimg, clustmapimg)
     }
   }
-  return(c(list(stat=statimg, coef=coefimg, sqrtSigma=res), inference) )
+  return(c(list(stat=statimg, sqrtSigma=res), inference) )
 }
 
 #' Returns a statistical niftiImage object from a statMap object
@@ -146,13 +147,13 @@ stat.statMap = function(x, method=c('p', 'S', 'chisq')){
     if(method=='s'){
       res = chisq2S(res, x$sqrtSigma$df, x$sqrtSigma$n)
       if(x$sqrtSigma$df==1){
-        res = res * sign(x$coef)
+        res = res * sign(x$sqrtSigma$coef)
       }
     }
     if(method == 'p'){
       res = -pchisq(res, df = x$sqrtSigma$df, lower.tail=FALSE, log.p=TRUE)/log(10)
       if(x$sqrtSigma$df==1){
-        res = res * sign(x$coef)
+        res = res * sign(x$sqrtSigma$coef)
       }
     }
     stat[ stat!=0] = res
@@ -169,7 +170,8 @@ stat.statMap = function(x, method=c('p', 'S', 'chisq')){
 #' @export
 coef.statMap = function(object, ...){
   # output 4D coefficient image
-  coef = simplify2array(lapply(1:nrow(object$coef), function(coefv){ object$mask[object$mask!=0] = object$coef[coefv,]; object$mask}))
+  coef = simplify2array(lapply(1:nrow(object$sqrtSigma$coef),
+                               function(coefv){ object$mask[object$mask!=0] = object$sqrtSigma$coef[coefv,]; object$mask}))
   coef = updateNifti(coef, template=object$mask)
   return(coef)
 }
