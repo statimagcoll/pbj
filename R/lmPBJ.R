@@ -166,19 +166,20 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
 
   # fit model to all image data
   QR = qr(X * W)
-  coef = qr.coef(QR, Y * W)[peind,,drop = FALSE]    # beta
+  # coef = qr.coef(QR, Y * W)[peind,,drop = FALSE]    # coef of X1
+  coef = qr.coef(QR, Y * W)  # coef of X = [X0, X1]
   res = qr.resid(QR, Y * W) # residual
   X1res = qr.resid(qr(Xred * W), X1 * W)
 
   # model fitting for different W structure
   if(W_structure == "independent"){
-    coef0 = NULL
+    # coef0 = NULL # record the coefficients before estimating rho
     summary_rho = 0
     rho = NULL
     Y = Y * W
   }else if(W_structure == "exchangeable"){
-    # return W in the first iteration for test
-    coef0 = coef
+    # coef0 = coef
+
     # split observations by id
     grouped_id = split(seq(nrow(Y)), sort(id))
     # estimate variance of residual
@@ -230,12 +231,13 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     # refit model to all image data
     QR = qr(W %*% X)
     Y = as.matrix(W %*% Y)
-    coef = qr.coef(QR, Y)[peind,,drop = FALSE] # beta
+    # coef = qr.coef(QR, Y)[peind,,drop = FALSE]
+    coef = qr.coef(QR, Y)
     res = qr.resid(QR, Y)
     X1res = qr.resid(qr(W %*% Xred), W %*% X1)
     w = W^2
   }else{
-    stop('Error: Input must be "independent" or "exchangeable".')
+    stop('Error: W_structure must be "independent" or "exchangeable".')
   }
 
   # we use non-robust estimator under exchangeable structure
@@ -246,13 +248,13 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
   # estimator
   if(!robust){
     sigmas = sqrt(colSums(res^2)/rdf)
-    AsqrtInv = backsolve(r=qr.R(qr(X1res)), x=diag(df) )
+    AsqrtInv = backsolve(r=qr.R(qr(X1res)), x=diag(df))
     sqrtSigma = crossprod(AsqrtInv, matrix(X1res, nrow=df, ncol=n, byrow=TRUE)) # sqrtSigma = A^{-1/2}X_1^TR0
 
     # used to compute chi-squared statistic
     normedCoef = sweep(sqrtSigma %*% Y, 2, sigmas, FUN='/') # sweep((AsqrtInv%*% coef), 2, sigmas, FUN='/') #
     # In this special case only the residuals vary across voxels, so sqrtSigma can be obtained from the residuals
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef0=coef0, rho_avg = summary_rho, rho = rho,
+    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
                      n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
     rm(AsqrtInv, Y, res, sigmas, X1res)
   } else {
@@ -278,7 +280,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     normedCoef = matrix(simplify2array( lapply(1:V, function(ind) crossprod(matrix(BsqrtInv[,ind], nrow=df, ncol=df), normedCoef[ind,])) ), nrow=df)
     #assign('normedCoeflmPBJ', normedCoef, envir = .GlobalEnv)
     # Things needed to resample the robust statistics
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef0=coef0, rho_avg = summary_rho, rho = rho,
+    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
                      n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
     rm(BsqrtInv, Y, res, X1resQ, X1res)
   }
@@ -293,11 +295,11 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
                       })
   stat = colSums(normedCoef^2)
   if(transform=='f'){
-    stat = qchisq(pf(stat/df, df1=df, df2=rdf, log.p = TRUE ), df=df, log.p=TRUE )
+    stat = qchisq(pf(stat/df, df1=df, df2=rdf, log.p = TRUE), df=df, log.p=TRUE )
   }
 
   # used later to indicated t-statistic
-  out = list(stat=stat, coef=coef, normedCoef=normedCoef, sqrtSigma=sqrtSigma, mask=mask, template=template,
+  out = list(stat=stat, normedCoef=normedCoef, sqrtSigma=sqrtSigma, mask=mask, template=template,
              images=images, formulas=list(full=form, reduced=formred), data = get_all_vars(form, data = data))
   class(out) = c('statMap', 'list')
 
@@ -306,7 +308,6 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
   if(!is.null(outdir)){
     files = write.statMap(out, outdir)
     out$stat = files$stat
-    out$coef = files$coef
     out$sqrtSigma = files$sqrtSigma
     # if mask was a character then pass that forward instead if the niftiImage
     if(exists('maskimg'))
