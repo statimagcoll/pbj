@@ -23,7 +23,7 @@ test_that("pbj_pbjBootRobustX performs correctly when: method = 'wild', robust =
                    Winv = pain$data$Winv, zeros = TRUE, transform = 'none',
                    robust = TRUE, HC3 = TRUE, outdir = outdir)
 
-  sqrtSigma <- readRDS(statMap$sqrtSigma)
+  sqrtSigma <- readRDS(file = statMap$sqrtSigma)
   mask <- statMap$mask
   dims <- dim(sqrtSigma$res)
   rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}
@@ -80,7 +80,7 @@ test_that("pbj_pbjBootRobustX performs correctly when: method = 'wild', robust =
                    Winv = pain$data$Winv, zeros = TRUE, transform = 'none', W_structure = "independent",
                    robust = TRUE, HC3 = TRUE, outdir = outdir)
 
-  sqrtSigma <- readRDS(statMap$sqrtSigma)
+  sqrtSigma <- readRDS(file = statMap$sqrtSigma)
   mask <- statMap$mask
   dims <- dim(sqrtSigma$res)
   rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}
@@ -149,7 +149,7 @@ test_that("pbj_pbjBootRobustX performs correctly when: method = 'wild', robust =
                    W = pain$data$W, robust = TRUE, zeros=TRUE, transform='none',
                    HC3 = TRUE, W_structure = "exchangeable", outdir = outdir)
 
-  sqrtSigma <- readRDS(statMap$sqrtSigma)
+  sqrtSigma <- readRDS(file = statMap$sqrtSigma)
   mask <- statMap$mask
   dims <- dim(sqrtSigma$res)
   rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}
