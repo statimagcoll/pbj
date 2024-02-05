@@ -280,7 +280,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     normedCoef = matrix(simplify2array( lapply(1:V, function(ind) crossprod(matrix(BsqrtInv[,ind], nrow=df, ncol=df), normedCoef[ind,])) ), nrow=df)
     #assign('normedCoeflmPBJ', normedCoef, envir = .GlobalEnv)
     # Things needed to resample the robust statistics
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=matrix(1, nrow=n) %*% W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
+    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
                      n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
     rm(BsqrtInv, Y, res, X1resQ, X1res)
   }
