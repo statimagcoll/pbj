@@ -236,7 +236,6 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     coef = qr.coef(QR, Y)
     res = qr.resid(QR, Y)
     X1res = qr.resid(qr(W %*% Xred), W %*% X1)
-    w = W^2
   }else{
     stop('Error: W_structure must be "independent" or "exchangeable".')
   }
@@ -255,7 +254,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     # used to compute chi-squared statistic
     normedCoef = sweep(sqrtSigma %*% Y, 2, sigmas, FUN='/') # sweep((AsqrtInv%*% coef), 2, sigmas, FUN='/') #
     # In this special case only the residuals vary across voxels, so sqrtSigma can be obtained from the residuals
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=matrix(1, nrow=n) %*% W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
+    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
                      n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
     rm(AsqrtInv, Y, res, sigmas, X1res)
   } else {
