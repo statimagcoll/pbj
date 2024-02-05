@@ -177,6 +177,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     summary_rho = 0
     rho = NULL
     Y = Y * W
+    W = diag(W)
   }else if(W_structure == "exchangeable"){
     # coef0 = coef
 
