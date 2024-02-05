@@ -215,7 +215,7 @@ resics <- function(stat, ShatSq, n, df, rdf, normMethod=c( '1', 'param'), mask){
 #'
 #' @param statmap The statMap object returned by lmPBJ using the `resics` function.
 #' @param alpha The function returns 1-alpha simultaneous confidence intervals.
-#'  @export
+#' @export
 #'
 sci <- function(statmap, alpha){
   normMethod = statmap$pbj$statArgs$normMethod
