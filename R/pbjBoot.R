@@ -40,7 +40,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
       sqrtSigma$QR = qr(sqrtSigma$XW)
     }
     # for bootstrapping under the alternative
-    if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
+    if(!null) sqrtSigma$res = matrix(1, nrow=n) %*% sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
 
     statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
   } else {
@@ -56,7 +56,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
       sqrtSigma$QR = qr(sqrtSigma$XW)
     }
     # for bootstrapping under the alternative
-    if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
+    if(!null) sqrtSigma$res = matrix(1, nrow=n) %*% sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
 
     sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
     sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
