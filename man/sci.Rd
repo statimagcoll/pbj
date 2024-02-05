@@ -9,8 +9,7 @@ sci(statmap, alpha)
 \arguments{
 \item{statmap}{The statMap object returned by lmPBJ using the `resics` function.}
 
-\item{alpha}{The function returns 1-alpha simultaneous confidence intervals.
-@export}
+\item{alpha}{The function returns 1-alpha simultaneous confidence intervals.}
 }
 \description{
 Uses bootstrap results to construct simultaneous confidence intervals.
