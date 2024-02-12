@@ -168,46 +168,31 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
 #' Performs one bootstrap for RESI confidence set construction
 #'
 #' @param stat bootstrap value of the test statistic image. It is a nifti image array.
-#' @param ShatSq The RESI estimate computed in the observed data.
+#' @param Shat The RESI estimate computed in the observed data.
 #' @param n The sample size/ number of independent sampling units.
 #' @param df Numerator degrees of freedom
 #' @param rdf Denominator degrees of freedom
 #' @param normMethod The value used to normalize the test statistic in each
 #'  bootstrap. "param" means it's estimated assuming the test
-#'  statistic if F-distributed. "1" means no scaling. "1" is the default.
+#'  statistic if F-distributed. "none" means no scaling. "param" is the default.
 #' @param mask Mask image identifying where measurements were taken in the image.
 #' @export
 #'
-resics <- function(stat, ShatSq, n, df, rdf, normMethod=c( '1', 'param'), mask){
-  # This is S hat
-  #stat <- RESI::chisq2S(stat[mask!=0], df, N)
-  # This is the test statistic in the mask
-  lambda_b = stat[mask!=0]
-  # This is S tilde squared
-  stat = lambda_b/n
-  w_max <- c()
-  w_min <- c()
+resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask)
+{
+  lambda_b = stat[mask != 0]
+  stat = sqrt(lambda_b/n)
+  SD = switch(normMethod,
+              "none"=1,
+              # asymptotic variance of sqrt(n) Shat
+              "param" = sqrt(stat^2/2 + 1))
 
-  if(normMethod == 1){
-    SD <- 1
-    boots <- stat - ShatSq
-    w_max <- max(boots)
-    w_min <- min(boots)
-  }
-
-  if(normMethod == "param"){
-    # The estimated variance of the test statistic
-    # SNV: Looks right to me
-    varStildeSq <- (df/n)^2 *(2*((df + lambda_b)^2 + (df + 2*lambda_b)*(rdf - 2))*((rdf/df)^2) / ((rdf - 2)^2 * (rdf - 4)))
-    # this is the standard error of the test statistic
-    SD_b <- sqrt(varStildeSq)
-    boots <- stat - ShatSq
-    boots <- boots / SD_b
-    w_max <- max(boots)
-    w_min <- min(boots)
-  }
-  # returns max and min across the image
-  return(c(w_min,w_max))
+  # assumes sample size is the same at all locations
+  boots <- (stat - Shat)/SD
+  w_max <- max(boots)
+  w_min <- min(boots)
+  # return(list(w_min, w_max, stat))
+  return(c(w_min, w_max))
 }
 
 
@@ -225,18 +210,17 @@ sci <- function(statmap, alpha){
   n <- statmap$sqrtSigma$n
   # the observed test statistic image
   lambda <- statmap$stat
-  res = lambda/n
+  res = sqrt(lambda/n)
   df <- statmap$sqrtSigma$df
   rdf <- statmap$sqrtSigma$rdf
   cu <- quantile(w_max_vec, 1 - alpha / 2)
   cl <- quantile(w_min_vec, alpha / 2)
 
-  if(normMethod == 1){
-    SD <- 1
-  } else  if(normMethod == "param"){
-    # The estimated standard error of the test statistic
-    SD <- 2 * sqrt((df/n)^2 *((df + lambda)^2 + (df + 2*lambda)*(rdf - 2))*(rdf/df)^2 / (rdf - 2)^2 / (rdf - 4)  )
-  }
+  SD = switch(normMethod,
+              "none"=1,
+              # asymptotic variance of Shat
+              "param" = sqrt(res^2/2 + 1))
   statmap$SCI <- data.frame('SLCI'=res - cu*SD, 'SUCI' = res - cl*SD)
+  #statmap$SCI <- data.frame('SLCI'=res + cl*SD, 'SUCI' = res + cu*SD)
   return(statmap)
 }
