@@ -35,8 +35,8 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     } else if (method=='nonparametric'){
       samp = sample(n, replace=TRUE)
       sqrtSigma$res = sweep(sqrtSigma$res[samp,], 1, sqrt(1-h[samp]), '/')
-      sqrtSigma$X1res = sqrtSigma$X1res[samp,]
-      sqrtSigma$XW = sqrtSigma$XW[samp,]
+      sqrtSigma$X1res = sqrtSigma$X1res[samp,,drop=FALSE]
+      sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
       sqrtSigma$QR = qr(sqrtSigma$XW)
     }
     # for bootstrapping under the alternative
