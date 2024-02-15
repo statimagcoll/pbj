@@ -26,38 +26,24 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     h = rep(0, n)
   }
 
+  if(method=='wild'){
+    sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
+  } else if(method=='permutation'){
+    sqrtSigma$res = sqrtSigma$res[sample(n), ]
+  } else if (method=='nonparametric'){
+    samp = sample(n, replace=TRUE)
+    sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
+    sqrtSigma$X1res = sqrtSigma$X1res[samp,,drop=FALSE]
+    sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
+    sqrtSigma$QR = qr(sqrtSigma$XW)
+  }
+
+  # for bootstrapping under the alternative
+  if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
 
   if(robust){
-    if(method=='wild'){#is.list(sqrtSigma)){ sqrtSigma should be a list here
-      sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
-    } else if (method=='permutation'){
-      sqrtSigma$res = sqrtSigma$res[sample(n),]
-    } else if (method=='nonparametric'){
-      samp = sample(n, replace=TRUE)
-      sqrtSigma$res = sweep(sqrtSigma$res[samp,], 1, sqrt(1-h[samp]), '/')
-      sqrtSigma$X1res = sqrtSigma$X1res[samp,,drop=FALSE]
-      sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
-      sqrtSigma$QR = qr(sqrtSigma$XW)
-    }
-    # for bootstrapping under the alternative
-    if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
-
     statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
   } else {
-    if(method=='wild'){
-      sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
-    } else if(method=='permutation'){
-      sqrtSigma$res = sqrtSigma$res[sample(n), ]
-    } else if (method=='nonparametric'){
-      samp = sample(n, replace=TRUE)
-      sqrtSigma$res = sweep(sqrtSigma$res[samp,], 1, sqrt(1-h[samp]), '/')
-      sqrtSigma$X1res = sqrtSigma$X1res[samp,]
-      sqrtSigma$XW = sqrtSigma$XW[samp,]
-      sqrtSigma$QR = qr(sqrtSigma$XW)
-    }
-    # for bootstrapping under the alternative
-    if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
-
     sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
     sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
     # this could be performed outside of the bootstrap function
@@ -75,7 +61,9 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
                       edgeworth={message('Computing edgeworth transform.')
                         matrix(qnorm(vpapx_edgeworth(stat=statimg, mu3=colSums(sqrtSigma$res^3, dims=1), mu4=colSums(sqrtSigma$res^4, dims=1) ) ), nrow=df)
                       })
+
   statimg = colSums(statimg^2)
+
   if(tolower(transform)=='f'){
     statimg = qchisq(pf(statimg/df, df1=df, df2=rdf, log.p = TRUE ), df=df, log.p=TRUE )
   }
