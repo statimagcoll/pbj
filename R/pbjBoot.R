@@ -33,7 +33,9 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   } else if (method=='nonparametric'){
     samp = sample(n, replace=TRUE)
     sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
-    sqrtSigma$X1res = sqrtSigma$X1res[samp,,drop=FALSE]
+    sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
+    sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
+    sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
     sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
     sqrtSigma$QR = qr(sqrtSigma$XW)
   }

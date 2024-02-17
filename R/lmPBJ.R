@@ -136,24 +136,9 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
 
   # reorder everything by id
   if(!is.null(id)){
-    # reorder X
-    if (ncol(X) == 1) {
-      X = as.matrix(X[order(id)], ncol = 1)
-    } else {
-      X = X[order(id),]
-    }
-    # reorder Xred
-    if (ncol(Xred) == 1) {
-      Xred = as.matrix(Xred[order(id)], ncol = 1)
-    } else {
-      Xred = Xred[order(id),]
-    }
-    # reorder Y
-    if (ncol(Y) == 1) {
-      Y = as.matrix(Y[order(id)], ncol = 1)
-    } else {
-      Y = Y[order(id),]
-    }
+    X = X[order(id),, drop=FALSE]
+    Xred = Xred[order(id),, drop=FALSE]
+    Y = Y[order(id),, drop=FALSE]
     W = W[order(id)]
   }
 
@@ -245,45 +230,41 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     stop('When W_structure is "exchangeable", robust has to be TRUE.')
   }
 
-  # estimator
-  if(!robust){
-    sigmas = sqrt(colSums(res^2)/rdf)
-    AsqrtInv = backsolve(r=qr.R(qr(X1res)), x=diag(df))
-    sqrtSigma = crossprod(AsqrtInv, matrix(X1res, nrow=df, ncol=n, byrow=TRUE)) # sqrtSigma = A^{-1/2}X_1^TR0
-
-    # used to compute chi-squared statistic
-    normedCoef = sweep(sqrtSigma %*% Y, 2, sigmas, FUN='/') # sweep((AsqrtInv%*% coef), 2, sigmas, FUN='/') #
-    # In this special case only the residuals vary across voxels, so sqrtSigma can be obtained from the residuals
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
-                     n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
-    rm(AsqrtInv, Y, res, sigmas, X1res)
+  if(HC3){
+    h=rowSums(qr.Q(QR)^2); h = ifelse(h>=1, 1-eps, h)
+    X1resQ = sweep(simplify2array(rep(list(res/(1-h)), df)),  c(1,3), X1res, '*')
   } else {
-    # first part of normedCoef
-    normedCoef = colSums(sweep(simplify2array(rep(list(Y), df)), MARGIN = c(1,3), STATS = X1res, FUN = '*'), dims=1)
-    if(HC3){
-      h=rowSums(qr.Q(QR)^2); h = ifelse(h>=1, 1-eps, h)
-      X1resQ = sweep(simplify2array(rep(list(res/(1-h)), df)),  c(1,3), X1res, '*')
-    } else {
-      # returns nXVXm_1 array
-      X1resQ = sweep(simplify2array(rep(list(res), df)),  c(1,3), X1res, '*')
-    }
-    if(!is.null(id)){
-      id = factor(id)
-      IDmat = model.matrix(~-1+id)
-      id = as.integer(id)
-      X1resQ = array(apply(X1resQ, 3, function(mat) crossprod(IDmat, mat)), dim=c(ncol(IDmat), V, df))
-    }
-    # apply across voxels. returns V X m_1^2 array
-    BsqrtInv = matrix(apply(X1resQ, 2, function(x){ backsolve(r=qr.R(qr(x)), x=diag(df)) }), nrow=df^2, ncol=V)
-    #assign('BsqrtInvlmPBJ', BsqrtInv, envir = .GlobalEnv)
-    # second part of normedCoef
-    normedCoef = matrix(simplify2array( lapply(1:V, function(ind) crossprod(matrix(BsqrtInv[,ind], nrow=df, ncol=df), normedCoef[ind,])) ), nrow=df)
-    #assign('normedCoeflmPBJ', normedCoef, envir = .GlobalEnv)
-    # Things needed to resample the robust statistics
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
-                     n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
-    rm(BsqrtInv, Y, res, X1resQ, X1res)
+    # returns nXVXm_1 array
+    h=rep(0, n)
+    X1resQ = sweep(simplify2array(rep(list(res), df)),  c(1,3), X1res, '*')
   }
+
+  if(!is.null(id)){
+    id = factor(id)
+    IDmat = model.matrix(~-1+id)
+    id = as.integer(id)
+    X1resQ = array(apply(X1resQ, 3, function(mat) crossprod(IDmat, mat)), dim=c(ncol(IDmat), V, df))
+  }
+
+  # Things needed to resample the robust statistics
+  sqrtSigma = list(res=Y, X1res=as.matrix(X1res), X1W=W %*% X1, XredW=W %*% Xred, QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
+                   n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
+
+    # Computes test statistic
+  if(robust){
+    normedCoef = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+  } else {
+    sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
+    sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
+    # this could be performed outside of the bootstrap function
+    AsqrtInv = backsolve(r=qr.R(qr(sqrtSigma$X1res)), x=diag(df) )
+    normedCoef = crossprod(AsqrtInv, matrix(sqrtSigma$X1res, nrow=df, ncol=n, byrow=TRUE))
+    # used to compute chi-squared statistic
+    normedCoef = normedCoef %*% sqrtSigma$res
+  }
+  sqrtSigma$res = res
+  # warnings due to BsqrtInv only existing under some settings
+  # suppressWarnings(rm(BsqrtInv,X1resQ, AsqrtInv, Y, res, sigmas, X1res))
 
   # use transform to compute chi-squared statistic
   normedCoef = switch(transform,
