@@ -19,26 +19,53 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   HC3 = sqrtSigma$HC3
   robust = sqrtSigma$robust
   transform = sqrtSigma$transform
+  rho = sqrtSigma$rho
   if(HC3){
     h=rowSums(qr.Q(sqrtSigma$QR)^2); h = ifelse(h>=1, 1-eps, h)
     #h=rowSums(qr.Q(qr(sqrtSigma$X))^2); h = ifelse(h>=1, 1-eps, h)
   } else {
     h = rep(0, n)
   }
+  if(!is.null(rho)){
+    grouped_id = split(1:n, sort(id))
 
-  if(method=='wild'){
-    sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
-  } else if(method=='permutation'){
-    sqrtSigma$res = sqrtSigma$res[sample(n), ]
-  } else if (method=='nonparametric'){
-    samp = sample(n, replace=TRUE)
-    sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
-    sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
-    sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
-    sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
-    sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
-    sqrtSigma$QR = qr(sqrtSigma$XW)
+    if(method=='wild'){
+      sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*') # same rad indicator for each subject
+    } else if(method=='permutation'){ # permute within clusters
+      sampleIndex = unlist(sapply(grouped_id, function(x) {
+        if(length(x) == 1){
+          x
+        }else{
+          sample(x, size = length(x), replace = TRUE)
+        }
+      }))
+      sqrtSigma$res = sqrtSigma$res[sampleIndex, ]
+    } else if (method=='nonparametric'){ # sample within and between clusters
+      sampleID = sample(unique(id), replace=TRUE)
+      samp = c(sapply(sampleID, function(x) grouped_id[[x]]))
+      sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
+      sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
+      sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
+      sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
+      sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
+      sqrtSigma$QR = qr(sqrtSigma$XW)
+    }
+  }else{
+    if(method=='wild'){
+      sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
+    } else if(method=='permutation'){
+      sqrtSigma$res = sqrtSigma$res[sample(n), ]
+    } else if (method=='nonparametric'){
+      samp = sample(n, replace=TRUE)
+      sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
+      sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
+      sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
+      sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
+      sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
+      sqrtSigma$QR = qr(sqrtSigma$XW)
+    }
   }
+
 
   # for bootstrapping under the alternative
   if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res

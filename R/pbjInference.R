@@ -28,7 +28,8 @@
 #' `rois` argument that outputs an integer valued image identifying where each topological
 #' features is located.
 #' @example inst/examples/pbjInference.R
-pbjInference = function(statMap, statistic = mmeStat, null = TRUE, nboot=5000, rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}, method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'), progress=FALSE, rdata_rds=NULL, cft_s=NULL, cft_p=NULL, cft_chisq=NULL, mc.cores=1, mc.preschedule=FALSE, ...){
+pbjInference = function(statMap, statistic = mmeStat, null = TRUE, nboot=5000, rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}, method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'),
+                        progress=FALSE, rdata_rds=NULL, cft_s=NULL, cft_p=NULL, cft_chisq=NULL, mc.cores=1, mc.preschedule=FALSE, ...){
   argsList <- c(as.list(environment()), list(...))
   # CFT passed as p value or effect size converted to chi-squared threshold
   argsList$cft = cft_chisq
@@ -74,7 +75,10 @@ pbjInference = function(statMap, statistic = mmeStat, null = TRUE, nboot=5000, r
 #' and compute some topological feature from the image. returned as a list. Multiple topological features can be returned, as in [mmeStat()] and [cluster()].
 #' To use default methods the statistic must have a logical `rois` argument that outputs an integer valued image identifying where each topological features is located. Details of the resampling procedures are available in Vandekar et al. (2022).
 #' @example inst/examples/pbjInference.R
-pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}, method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'), progress=FALSE, mc.cores=1, mc.preschedule=FALSE, ...){
+pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000,
+                          rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)},
+                          method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'),
+                          progress=FALSE, mc.cores=1, mc.preschedule=FALSE, ...){
   if(class(statMap)[1] != 'statMap')
     warning('Class of first argument is not \'statMap\'.')
   runMode = tolower(runMode[1])
