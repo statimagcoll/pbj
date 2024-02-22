@@ -19,14 +19,14 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   HC3 = sqrtSigma$HC3
   robust = sqrtSigma$robust
   transform = sqrtSigma$transform
-  rho = sqrtSigma$rho
+  rho_avg = sqrtSigma$rho_avg
   if(HC3){
     h=rowSums(qr.Q(sqrtSigma$QR)^2); h = ifelse(h>=1, 1-eps, h)
     #h=rowSums(qr.Q(qr(sqrtSigma$X))^2); h = ifelse(h>=1, 1-eps, h)
   } else {
     h = rep(0, n)
   }
-  if(!is.null(rho)){
+  if(!is.null(rho_avg)){
     grouped_id = split(1:n, sort(id))
 
     if(method=='wild'){
