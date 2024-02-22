@@ -141,6 +141,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     Y = Y[order(id),, drop=FALSE]
     W = W[order(id)]
   }
+  id = sort(id)
 
   # w is returned in output
   w = W
