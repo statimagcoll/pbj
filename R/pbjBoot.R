@@ -42,7 +42,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
       sqrtSigma$res = sqrtSigma$res[sampleIndex, ]
     } else if (method=='nonparametric'){ # sample within and between clusters
       sampleID = sample(unique(id), replace=TRUE)
-      samp = c(sapply(sampleID, function(x) grouped_id[[x]]))
+      samp = unlist(lapply(sampleID, function(x) grouped_id[[as.character(x)]])) # collect observations by sampled ID
       sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
       sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
       sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
