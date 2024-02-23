@@ -80,7 +80,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
     # this could be performed outside of the bootstrap function
     AsqrtInv = backsolve(r=qr.R(qr(sqrtSigma$X1res)), x=diag(df) )
-    statimg = crossprod(AsqrtInv, matrix(sqrtSigma$X1res, nrow=df, ncol=n, byrow=TRUE))
+    statimg = crossprod(AsqrtInv, matrix(sqrtSigma$X1res, nrow=df, ncol=nrow(sqrtSigma$X1res), byrow=TRUE))
     # used to compute chi-squared statistic
     statimg = statimg %*% sqrtSigma$res
   }
