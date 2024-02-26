@@ -26,7 +26,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   } else {
     h = rep(0, n)
   }
-  if(!is.null(rho_avg)){
+  if(!is.null(id)){
     grouped_id = split(1:n, sort(id))
 
     if(method=='wild'){
