@@ -19,38 +19,69 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   HC3 = sqrtSigma$HC3
   robust = sqrtSigma$robust
   transform = sqrtSigma$transform
+  rho_avg = sqrtSigma$rho_avg
   if(HC3){
     h=rowSums(qr.Q(sqrtSigma$QR)^2); h = ifelse(h>=1, 1-eps, h)
     #h=rowSums(qr.Q(qr(sqrtSigma$X))^2); h = ifelse(h>=1, 1-eps, h)
   } else {
     h = rep(0, n)
   }
+  if(!is.null(rho_avg)){
+    grouped_id = split(1:n, sort(id))
 
-  if(method=='wild'){
-    sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
-  } else if(method=='permutation'){
-    sqrtSigma$res = sqrtSigma$res[sample(n), ]
-  } else if (method=='nonparametric'){
-    samp = sample(n, replace=TRUE)
-    sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
-    sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
-    sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
-    sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
-    sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
-    sqrtSigma$QR = qr(sqrtSigma$XW)
+    if(method=='wild'){
+      sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*') # same rad indicator for each subject
+    } else if(method=='permutation'){ # permute within clusters
+      sampleIndex = unlist(sapply(grouped_id, function(x) {
+        if(length(x) == 1){
+          x
+        }else{
+          sample(x, size = length(x), replace = TRUE)
+        }
+      }))
+      sqrtSigma$res = sqrtSigma$res[sampleIndex, ]
+    } else if (method=='nonparametric'){ # sample within and between clusters
+      sampleID = sample(unique(id), replace=TRUE)
+      samp = unlist(lapply(sampleID, function(x) grouped_id[[as.character(x)]])) # collect observations by sampled ID
+      sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
+      sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
+      sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
+      sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
+      sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
+      sqrtSigma$QR = qr(sqrtSigma$XW)
+    }
+  }else{
+    if(method=='wild'){
+      sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*')
+    } else if(method=='permutation'){
+      sqrtSigma$res = sqrtSigma$res[sample(n), ]
+    } else if (method=='nonparametric'){
+      samp = sample(n, replace=TRUE)
+      sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
+      sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
+      sqrtSigma$XredW = sqrtSigma$XredW[samp,,drop=FALSE]
+      sqrtSigma$X1res = qr.resid(qr(sqrtSigma$XredW), sqrtSigma$X1W)
+      sqrtSigma$XW = sqrtSigma$XW[samp,,drop=FALSE]
+      sqrtSigma$QR = qr(sqrtSigma$XW)
+    }
   }
+
 
   # for bootstrapping under the alternative
   if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
 
   if(robust){
-    statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+    if(method=='nonparametric'){
+      statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id=id[samp], h=h[samp], df)
+    }else{
+      statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+    }
   } else {
     sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
     sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
     # this could be performed outside of the bootstrap function
     AsqrtInv = backsolve(r=qr.R(qr(sqrtSigma$X1res)), x=diag(df) )
-    statimg = crossprod(AsqrtInv, matrix(sqrtSigma$X1res, nrow=df, ncol=n, byrow=TRUE))
+    statimg = crossprod(AsqrtInv, matrix(sqrtSigma$X1res, nrow=df, ncol=nrow(sqrtSigma$X1res), byrow=TRUE))
     # used to compute chi-squared statistic
     statimg = statimg %*% sqrtSigma$res
   }
