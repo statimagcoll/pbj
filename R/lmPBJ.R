@@ -48,7 +48,7 @@
 #' @export
 #' @example inst/examples/lmPBJ.R
 lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_structure="independent",
-                 Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none', 'f', 'edgeworth'),
+                 Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('none', 't', 'f', 'edgeworth'),
                  outdir=NULL, zeros=FALSE, HC3=TRUE, mc.cores = getOption("mc.cores", 2L)){
 
   # hard coded epsilon for rounding errors in computing hat values
@@ -230,10 +230,11 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     stop('When W_structure is "exchangeable", robust has to be TRUE.')
   }
 
-  if(HC3){
+  if(HC3 & robust){
     h=rowSums(qr.Q(QR)^2); h = ifelse(h>=1, 1-eps, h)
     X1resQ = sweep(simplify2array(rep(list(res/(1-h)), df)),  c(1,3), X1res, '*')
   } else {
+    HC3 = FALSE
     # returns nXVXm_1 array
     h=rep(0, n)
     X1resQ = sweep(simplify2array(rep(list(res), df)),  c(1,3), X1res, '*')
