@@ -19,13 +19,15 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   HC3 = sqrtSigma$HC3
   robust = sqrtSigma$robust
   transform = sqrtSigma$transform
-  rho_avg = sqrtSigma$rho_avg
+
   if(HC3){
     h=rowSums(qr.Q(sqrtSigma$QR)^2); h = ifelse(h>=1, 1-eps, h)
     #h=rowSums(qr.Q(qr(sqrtSigma$X))^2); h = ifelse(h>=1, 1-eps, h)
   } else {
     h = rep(0, n)
   }
+
+
   if(!is.null(id)){
     grouped_id = split(1:n, sort(id))
 
@@ -33,11 +35,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
       sqrtSigma$res = sweep(sqrtSigma$res, 1, rboot(n)/sqrt(1-h), '*') # same rad indicator for each subject
     } else if(method=='permutation'){ # permute within clusters
       sampleIndex = unlist(sapply(grouped_id, function(x) {
-        if(length(x) == 1){
-          x
-        }else{
-          sample(x, size = length(x), replace = TRUE)
-        }
+        if(length(x) == 1) x else sample(x, size = length(x), replace = TRUE)
       }))
       sqrtSigma$res = sqrtSigma$res[sampleIndex, ]
     } else if (method=='nonparametric'){ # sample within and between clusters
@@ -70,12 +68,13 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   # for bootstrapping under the alternative
   if(!null) sqrtSigma$res = sqrtSigma$XW %*% sqrtSigma$coef + sqrtSigma$res
 
+  # robust estimator or not
   if(robust){
-    if(method=='nonparametric'){
-      statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id=id[samp], h=h[samp], df)
-    }else{
-      statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+    if (method == 'nonparametric') {
+      h = h[samp]
+      id = rep(1:length(unique(samp)), times=table(samp)[unique(samp)])
     }
+    statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
   } else {
     sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
     sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
