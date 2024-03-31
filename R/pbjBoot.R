@@ -39,7 +39,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
       }))
       sqrtSigma$res = sqrtSigma$res[sampleIndex, ]
     } else if (method=='nonparametric'){ # sample within and between clusters
-      sampleID = sample(unique(id), replace=TRUE)
+      sampleID = sample(unique(id), size = length(unique(id)), replace=TRUE)
       samp = unlist(lapply(sampleID, function(x) grouped_id[[as.character(x)]])) # collect observations by sampled ID
       sqrtSigma$res = sweep(sqrtSigma$res[samp,,drop=FALSE], 1, sqrt(1-h[samp]), '/')
       sqrtSigma$X1W = sqrtSigma$X1W[samp,,drop=FALSE]
@@ -72,7 +72,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   if(robust){
     if (method == 'nonparametric') {
       h = h[samp]
-      id = rep(1:length(unique(samp)), times=table(samp)[unique(samp)])
+      id = rep(1:length(unique(id)), unlist(lapply(sampleID, function(x) table(id)[[as.character(x)]])))
     }
     statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
   } else {
