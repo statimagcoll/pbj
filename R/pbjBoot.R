@@ -28,7 +28,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
   }
 
 
-  if(!is.null(id)){
+  if(length(id) != length(unique(id))){
     grouped_id = split(1:n, sort(id))
 
     if(method=='wild'){
