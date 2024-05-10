@@ -189,8 +189,8 @@ resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask
 
   # assumes sample size is the same at all locations
   boots <- (stat - Shat)/SD
-  w_max <- max(boots)
-  w_min <- min(boots)
+  w_max <- max(boots, na.rm = T)
+  w_min <- min(boots, na.rm = T)
   # return(list(w_min, w_max, stat))
   return(c(w_min, w_max))
 }
