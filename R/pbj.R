@@ -189,8 +189,8 @@ resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask
 
   # assumes sample size is the same at all locations
   boots <- (stat - Shat)/SD
-  w_max <- max(boots, na.rm = T)
-  w_min <- min(boots, na.rm = T)
+  w_max <- max(boots)
+  w_min <- min(boots)
   # return(list(w_min, w_max, stat))
   return(c(w_min, w_max))
 }
@@ -204,7 +204,7 @@ resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask
 #'
 sci <- function(statmap, alpha){
   normMethod = statmap$pbj$statArgs$normMethod
-  a <- do.call(rbind, statmap$pbj$boots)
+  a <- do.call(rbind, statmap$pbj$boots) %>% na.omit()
   w_min_vec <- a[,1]
   w_max_vec <- a[,2]
   n <- statmap$sqrtSigma$n
