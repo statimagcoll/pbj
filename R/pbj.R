@@ -204,7 +204,7 @@ resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask
 #'
 sci <- function(statmap, alpha){
   normMethod = statmap$pbj$statArgs$normMethod
-  a <- do.call(rbind, statmap$pbj$boots) %>% na.omit()
+  a <- do.call(rbind, statmap$pbj$boots)
   w_min_vec <- a[,1]
   w_max_vec <- a[,2]
   n <- statmap$sqrtSigma$n
