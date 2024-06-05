@@ -178,19 +178,20 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
 #' @param mask Mask image identifying where measurements were taken in the image.
 #' @export
 #'
-resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask)
+resics = function (stat, Shat, nsub, df, rdf, normMethod = c("param", "none"), mask)
 {
-  lambda_b = stat[mask != 0]
-  stat = sqrt(lambda_b/n)
+  # lambda_b = stat[mask != 0]
+  # stat = sqrt(lambda_b/n)
+  es_boot = RESI::chisq2S(chisq = stat[mask != 0], n = nsub, df = df)
   SD = switch(normMethod,
               "none"=1,
               # asymptotic variance of sqrt(n) Shat
-              "param" = sqrt(stat^2/2 + 1))
+              "param" = sqrt(es_boot^2/2 + 1))
 
   # assumes sample size is the same at all locations
-  boots <- (stat - Shat)/SD
-  w_max <- max(boots)
-  w_min <- min(boots)
+  boots = (es_boot - Shat)/SD
+  w_max = max(boots)
+  w_min = min(boots)
   # return(list(w_min, w_max, stat))
   return(c(w_min, w_max))
 }
@@ -204,23 +205,25 @@ resics = function (stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask
 #'
 sci <- function(statmap, alpha){
   normMethod = statmap$pbj$statArgs$normMethod
-  a <- do.call(rbind, statmap$pbj$boots)
-  w_min_vec <- a[,1]
-  w_max_vec <- a[,2]
-  n <- statmap$sqrtSigma$n
+  a = do.call(rbind, statmap$pbj$boots)
+  w_min_vec = a[,1]
+  w_max_vec = a[,2]
+  # n <- statmap$sqrtSigma$n
   # the observed test statistic image
-  lambda <- statmap$stat
-  res = sqrt(lambda/n)
-  df <- statmap$sqrtSigma$df
-  rdf <- statmap$sqrtSigma$rdf
-  cu <- quantile(w_max_vec, 1 - alpha / 2)
-  cl <- quantile(w_min_vec, alpha / 2)
+  # lambda <- statmap$stat
+  # res = sqrt(lambda/n)
+  es_est = RESI::chisq2S(chisq = statmap$stat, n = statmap$sqrtSigma$nsub,
+                         df = statmap$sqrtSigma$df)
+  df = statmap$sqrtSigma$df
+  rdf = statmap$sqrtSigma$rdf
+  cu = quantile(w_max_vec, 1 - alpha / 2)
+  cl = quantile(w_min_vec, alpha / 2)
 
   SD = switch(normMethod,
               "none"=1,
               # asymptotic variance of Shat
-              "param" = sqrt(res^2/2 + 1))
-  statmap$SCI <- data.frame('SLCI'=res - cu*SD, 'SUCI' = res - cl*SD)
+              "param" = sqrt(es_est^2/2 + 1))
+  statmap$SCI = data.frame('SLCI'= es_est - cu*SD, 'SUCI' = es_est - cl*SD)
   #statmap$SCI <- data.frame('SLCI'=res + cl*SD, 'SUCI' = res + cu*SD)
   return(statmap)
 }

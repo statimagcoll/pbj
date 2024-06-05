@@ -250,7 +250,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
 
   # Things needed to resample the robust statistics
   sqrtSigma = list(res=Y, X1res=as.matrix(X1res), X1W=W %*% X1, XredW=W %*% Xred, QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
-                   n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
+                   n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id, nsub=length(unique(id)))
 
     # Computes test statistic
   if(robust){
