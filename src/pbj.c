@@ -1,7 +1,6 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 #include <R_ext/Applic.h>
-#include <cblas.h>
 
 static SEXP pbj_useLAPACK_Sym = NULL;
 
