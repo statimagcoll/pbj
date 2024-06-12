@@ -102,7 +102,7 @@ image.niftiImage = function (x, BGimg = NULL, limits = 0, nrow=NULL, index = NUL
   # this is a hack to avoid par call when using image.statMap which creates a new device each time for some reason
   oldpar <- par(no.readonly = TRUE)
   if(oldpar$fg == 'black' & oldpar$bg=='white'){
-    par(fg='white', bg='black', mar=c(0,0,0,0), oma=c(0,0,0,0))
+    par(fg='white', bg='black') #, mar=c(0,0,0,0), oma=c(0,0,0,0))
   }
   if(lo){
     if (is.null(index)) {
