@@ -178,15 +178,18 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
 #' @param mask Mask image identifying where measurements were taken in the image.
 #' @export
 #'
-resics = function (stat, Shat, nsub, df, rdf, normMethod = c("param", "none"), mask)
+resics = function (stat, Shat, nsub, df, m, normMethod = c("param", "none"), mask)
 {
   # lambda_b = stat[mask != 0]
   # stat = sqrt(lambda_b/n)
   es_boot = RESI::chisq2S(chisq = stat[mask != 0], n = nsub, df = df)
+  lambda = nsub*es_boot^2
   SD = switch(normMethod,
               "none"=1,
               # asymptotic variance of sqrt(n) Shat
-              "param" = sqrt(es_boot^2/2 + 1))
+              # "param" = sqrt(es_boot^2/2 + 1))
+              "param" = sqrt(1/2 * (nsub-m)^2/((nsub-m)*lambda+2*df) *
+                               ((df+lambda)^2+(df+2*lambda)*(nsub-m-2))/(nsub*(nsub-m-2)*(nsub-m-4))))
 
   # assumes sample size is the same at all locations
   boots = (es_boot - Shat)/SD
@@ -210,19 +213,23 @@ sci <- function(statmap, alpha){
   w_max_vec = a[,2]
   # n <- statmap$sqrtSigma$n
   # the observed test statistic image
-  # lambda <- statmap$stat
+  lambda <- statmap$stat
   # res = sqrt(lambda/n)
-  es_est = RESI::chisq2S(chisq = statmap$stat, n = statmap$sqrtSigma$nsub,
+  nsub = statmap$sqrtSigma$nsub
+  m = statmap$sqrtSigma$m
+  es_est = RESI::chisq2S(chisq = statmap$stat, n = nsub,
                          df = statmap$sqrtSigma$df)
   df = statmap$sqrtSigma$df
-  rdf = statmap$sqrtSigma$rdf
+  # rdf = statmap$sqrtSigma$rdf
   cu = quantile(w_max_vec, 1 - alpha / 2)
   cl = quantile(w_min_vec, alpha / 2)
 
   SD = switch(normMethod,
               "none"=1,
               # asymptotic variance of Shat
-              "param" = sqrt(es_est^2/2 + 1))
+              # "param" = sqrt(es_est^2/2 + 1))
+              "param" = sqrt(1/2 * (nsub-m)^2/((nsub-m)*lambda+2*df) *
+                               ((df+lambda)^2+(df+2*lambda)*(nsub-m-2))/(nsub*(nsub-m-2)*(nsub-m-4))))
   statmap$SCI = data.frame('SLCI'= es_est - cu*SD, 'SUCI' = es_est - cl*SD)
   #statmap$SCI <- data.frame('SLCI'=res + cl*SD, 'SUCI' = res + cu*SD)
   return(statmap)

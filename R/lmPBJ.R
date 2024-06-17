@@ -130,6 +130,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
   peind = which(!colnames(X) %in% colnames(Xred))
   # rdf = N - ncol(X) # this is true unless X is rank deficient
   rdf = n - ncol(X)
+  m = ncol(X)
 
   # inverse weights were passed
   if(Winv) W[W!=0] = 1/W[W!=0]
@@ -250,7 +251,7 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
 
   # Things needed to resample the robust statistics
   sqrtSigma = list(res=Y, X1res=as.matrix(X1res), X1W=W %*% X1, XredW=W %*% Xred, QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
-                   n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id, nsub=length(unique(id)))
+                   n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id, nsub=length(unique(id)), m=m)
 
     # Computes test statistic
   if(robust){

@@ -215,7 +215,7 @@ pbjInferenceBG = function(argsList){
   # creates parent directories if they don't exist
   dir.create(dirname(rdata_rds), showWarnings = FALSE, recursive = TRUE)
   rcallRes = r_bg(function(argsList, rdata_rds){
-    computeTime = system.time(statMap <- do.call(pbj::pbjInferenceFG, argsList) )
+    computeTime = system.time(statMap <- do.call(pbj::pbjInferenceFG, argsList))
     if(grepl('.rds', tolower(rdata_rds))){
       saveRDS(statMap, file=rdata_rds)
     } else {
