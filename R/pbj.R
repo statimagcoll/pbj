@@ -187,10 +187,7 @@ resics = function (stat, Shat, nsub, df, m, normMethod = c("param", "none"), mas
   SD = switch(normMethod,
               "none"=1,
               # asymptotic variance of sqrt(n) Shat
-              # "param" = sqrt(es_boot^2/2 + 1))
-              "param" = sqrt(1/2 * (nsub-m)^2/((nsub-m)*lambda+2*df) *
-                               ((df+lambda)^2+(df+2*lambda)*(nsub-m-2))/(nsub*(nsub-m-2)*(nsub-m-4))))
-
+              "param" = sqrt(es_boot^2/2 + 1))
   # assumes sample size is the same at all locations
   boots = (es_boot - Shat)/SD
   w_max = max(boots, na.rm = T)
@@ -213,7 +210,7 @@ sci <- function(statmap, alpha){
   w_max_vec = a[,2]
   # n <- statmap$sqrtSigma$n
   # the observed test statistic image
-  lambda <- statmap$stat
+  lambda = statmap$stat
   # res = sqrt(lambda/n)
   nsub = statmap$sqrtSigma$nsub
   m = statmap$sqrtSigma$m
@@ -227,9 +224,7 @@ sci <- function(statmap, alpha){
   SD = switch(normMethod,
               "none"=1,
               # asymptotic variance of Shat
-              # "param" = sqrt(es_est^2/2 + 1))
-              "param" = sqrt(1/2 * (nsub-m)^2/((nsub-m)*lambda+2*df) *
-                               ((df+lambda)^2+(df+2*lambda)*(nsub-m-2))/(nsub*(nsub-m-2)*(nsub-m-4))))
+              "param" = sqrt(es_est^2/2 + 1))
   statmap$SCI = data.frame('SLCI'= es_est - cu*SD, 'SUCI' = es_est - cl*SD)
   #statmap$SCI <- data.frame('SLCI'=res + cl*SD, 'SUCI' = res + cu*SD)
   return(statmap)
