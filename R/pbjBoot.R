@@ -70,7 +70,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
 
   # robust estimator or not
   if(robust){
-    if (method == 'nonparametric') {
+    if (method == 'nonparametric' & !is.null(id)) {
       h = h[samp]
       id = rep(1:length(unique(id)), unlist(lapply(sampleID, function(x) table(id)[[as.character(x)]])))
     }
