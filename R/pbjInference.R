@@ -126,11 +126,14 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000,
 
   # If sqrtSigma can be stored and accessed efficiently on disk this can be efficiently run in parallel
   if(mc.cores>1){
+    RNGkind("L'Ecuyer-CMRG")
+    mc.reset.stream()
     boots = mclapply(1:nboot, function(ind, sqrtSigma, rboot, method, statistic, statArgs){
       statimg = pbjBoot(sqrtSigma, rboot, method = method)
       statArgs$stat[ mask!=0] = statimg
       do.call(statistic, statArgs)
-    }, mc.cores = mc.cores, mc.preschedule=mc.preschedule, sqrtSigma=sqrtSigma, rboot=rboot, method=method, statistic=statistic, statArgs=statArgs)
+    }, mc.cores = mc.cores, mc.preschedule=mc.preschedule, sqrtSigma=sqrtSigma,
+    rboot=rboot, method=method, statistic=statistic, statArgs=statArgs, mc.set.seed = TRUE)
   } else if(progress){
     pb = txtProgressBar(style=3, title='Generating null distribution')
     tmp = mask
