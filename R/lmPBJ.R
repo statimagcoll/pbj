@@ -248,8 +248,10 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
     id = as.integer(id)
     X1resQ = array(apply(X1resQ, 3, function(mat) crossprod(IDmat, mat)), dim=c(ncol(IDmat), V, df))
     nsub = length(unique(id))
+  }else{
+    nsub = nrow(X)
   }
-  nsub = nrow(X)
+
 
   # Things needed to resample the robust statistics
   sqrtSigma = list(res=Y, X1res=as.matrix(X1res), X1W=W %*% X1, XredW=W %*% Xred, QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
