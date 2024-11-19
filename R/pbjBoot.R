@@ -85,7 +85,6 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     statimg = statimg %*% sqrtSigma$res
   }
 
-
   statimg = switch(tolower(transform[1]),
                       none=statimg,
                       f=statimg,

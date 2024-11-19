@@ -100,7 +100,7 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000,
   statArgs = list(...)
   # add mask file if it's required for statistic function
   statFormals = formalArgs(statistic)
-  for(arg in statFormals[ statFormals %in% names(sqrtSigma)  ]){
+  for(arg in statFormals[ statFormals %in% names(sqrtSigma)]){
     statArgs[[ arg ]] = sqrtSigma[[arg]]
   }
   if(any(grepl('mask', formalArgs(statistic)))) statArgs$mask = mask
@@ -114,7 +114,7 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000,
   obsstat = do.call(statistic, statArgs)
   rois  = if('rois' %in% names(formals(statistic))){
     do.call(statistic, c(statArgs, rois=TRUE))
-  } else {
+  }else {
     NULL
   }
   dims = dim(sqrtSigma$res)
@@ -129,24 +129,24 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000,
     RNGkind("L'Ecuyer-CMRG")
     mc.reset.stream()
     boots = mclapply(1:nboot, function(ind, sqrtSigma, rboot, method, statistic, statArgs){
-      statimg = pbjBoot(sqrtSigma, rboot, method = method)
+      statimg = pbjBoot(sqrtSigma, rboot, method = method, null=null)
       statArgs$stat[ mask!=0] = statimg
       do.call(statistic, statArgs)
     }, mc.cores = mc.cores, mc.preschedule=mc.preschedule, sqrtSigma=sqrtSigma,
     rboot=rboot, method=method, statistic=statistic, statArgs=statArgs, mc.set.seed = TRUE)
-  } else if(progress){
+  }else if(progress){
     pb = txtProgressBar(style=3, title='Generating null distribution')
     tmp = mask
     if(nboot>0){
       for(i in 1:nboot){
-        statimg = pbjBoot(sqrtSigma, rboot, method = method)
+        statimg = pbjBoot(sqrtSigma, rboot, method = method, null=null)
         statArgs$stat[ mask!=0] = statimg
         boots[[i]] = do.call(statistic, statArgs)
         setTxtProgressBar(pb, round(i/nboot,2))
       }
       close(pb)
     }
-  } else {
+  }else {
     tmp = mask
     if(nboot>0){
       for(i in 1:nboot){
