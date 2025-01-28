@@ -28,7 +28,8 @@
 #' `rois` argument that outputs an integer valued image identifying where each topological
 #' features is located.
 #' @example inst/examples/pbjInference.R
-pbjInference = function(statMap, statistic = mmeStat, null = TRUE, nboot=5000, rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}, method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'), progress=FALSE, rdata_rds=NULL, cft_s=NULL, cft_p=NULL, cft_chisq=NULL, mc.cores=1, mc.preschedule=FALSE, ...){
+pbjInference = function(statMap, statistic = mmeStat, null = TRUE, nboot=5000, rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}, method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'),
+                        progress=FALSE, rdata_rds=NULL, cft_s=NULL, cft_p=NULL, cft_chisq=NULL, mc.cores=1, mc.preschedule=FALSE, ...){
   argsList <- c(as.list(environment()), list(...))
   # CFT passed as p value or effect size converted to chi-squared threshold
   argsList$cft = cft_chisq
@@ -74,7 +75,10 @@ pbjInference = function(statMap, statistic = mmeStat, null = TRUE, nboot=5000, r
 #' and compute some topological feature from the image. returned as a list. Multiple topological features can be returned, as in [mmeStat()] and [cluster()].
 #' To use default methods the statistic must have a logical `rois` argument that outputs an integer valued image identifying where each topological features is located. Details of the resampling procedures are available in Vandekar et al. (2022).
 #' @example inst/examples/pbjInference.R
-pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)}, method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'), progress=FALSE, mc.cores=1, mc.preschedule=FALSE, ...){
+pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000,
+                          rboot=function(n){ (2*stats::rbinom(n, size=1, prob=0.5)-1)},
+                          method=c('wild', 'permutation', 'nonparametric'), runMode=c('cdf','bootstrap'),
+                          progress=FALSE, mc.cores=1, mc.preschedule=FALSE, ...){
   if(class(statMap)[1] != 'statMap')
     warning('Class of first argument is not \'statMap\'.')
   runMode = tolower(runMode[1])
@@ -95,12 +99,22 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, r
   # arguments passed to statistic function
   statArgs = list(...)
   # add mask file if it's required for statistic function
+  statFormals = formalArgs(statistic)
+  for(arg in statFormals[ statFormals %in% names(sqrtSigma)]){
+    statArgs[[ arg ]] = sqrtSigma[[arg]]
+  }
   if(any(grepl('mask', formalArgs(statistic)))) statArgs$mask = mask
+
+  # same idea, but for other parameters
+  # loop above does this automatically for all statistic arguments
+  # if(any(grepl('df', formalArgs(statistic)))) statArgs$df = df
+  # if(any(grepl('n', formalArgs(statistic)))) statArgs$n = n
+  # if(any(grepl('rdf', formalArgs(statistic)))) statArgs$rdf = rdf
   statArgs$stat = stat
   obsstat = do.call(statistic, statArgs)
   rois  = if('rois' %in% names(formals(statistic))){
     do.call(statistic, c(statArgs, rois=TRUE))
-  } else {
+  }else {
     NULL
   }
   dims = dim(sqrtSigma$res)
@@ -112,24 +126,27 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, r
 
   # If sqrtSigma can be stored and accessed efficiently on disk this can be efficiently run in parallel
   if(mc.cores>1){
+    RNGkind("L'Ecuyer-CMRG")
+    mc.reset.stream()
     boots = mclapply(1:nboot, function(ind, sqrtSigma, rboot, method, statistic, statArgs){
-      statimg = pbjBoot(sqrtSigma, rboot, method = method)
+      statimg = pbjBoot(sqrtSigma, rboot, method = method, null=null)
       statArgs$stat[ mask!=0] = statimg
       do.call(statistic, statArgs)
-    }, mc.cores = mc.cores, mc.preschedule=mc.preschedule, sqrtSigma=sqrtSigma, rboot=rboot, method=method, statistic=statistic, statArgs=statArgs)
-  } else if(progress){
+    }, mc.cores = mc.cores, mc.preschedule=mc.preschedule, sqrtSigma=sqrtSigma,
+    rboot=rboot, method=method, statistic=statistic, statArgs=statArgs, mc.set.seed = TRUE)
+  }else if(progress){
     pb = txtProgressBar(style=3, title='Generating null distribution')
     tmp = mask
     if(nboot>0){
       for(i in 1:nboot){
-        statimg = pbjBoot(sqrtSigma, rboot, method = method)
+        statimg = pbjBoot(sqrtSigma, rboot, method = method, null=null)
         statArgs$stat[ mask!=0] = statimg
         boots[[i]] = do.call(statistic, statArgs)
         setTxtProgressBar(pb, round(i/nboot,2))
       }
       close(pb)
     }
-  } else {
+  }else {
     tmp = mask
     if(nboot>0){
       for(i in 1:nboot){
@@ -178,8 +195,8 @@ pbjInferenceFG = function(statMap, statistic = mmeStat, null=TRUE, nboot=5000, r
                #     rois[[ind]][is.na(rois[[ind]][,,])] = 0
                #   }
                # }
-               list(obsStat=obsstat, unadjCDF=unadjCDF, fwerCDF=fwerCDF, ROIs=rois)},
-             bootstrap=list(obsStat=obsstat, boots=boots) )
+               list(obsStat=obsstat, unadjCDF=unadjCDF, fwerCDF=fwerCDF, ROIs=rois, statArgs=statArgs)},
+             bootstrap=list(obsStat=obsstat, boots=boots, statArgs=statArgs) )
   class(out) = c('pbj', 'list')
   statMap$pbj = out
   return(statMap)
@@ -201,7 +218,7 @@ pbjInferenceBG = function(argsList){
   # creates parent directories if they don't exist
   dir.create(dirname(rdata_rds), showWarnings = FALSE, recursive = TRUE)
   rcallRes = r_bg(function(argsList, rdata_rds){
-    computeTime = system.time(statMap <- do.call(pbj::pbjInferenceFG, argsList) )
+    computeTime = system.time(statMap <- do.call(pbj::pbjInferenceFG, argsList))
     if(grepl('.rds', tolower(rdata_rds))){
       saveRDS(statMap, file=rdata_rds)
     } else {

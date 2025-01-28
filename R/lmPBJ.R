@@ -17,6 +17,7 @@
 #' @param W Numeric vector of weights for regression model. Can be used to deweight noisy
 #'  observations. Same as what should be passed to lm.
 #' @param Winv Inverse weights for regression model. Inverse of W.
+#' @param W_structure The working correlation structure if id is provided. "independent" and "exchangeable" are accepted.
 #' @param template Template image used for visualization.
 #' @param formImages n X p matrix of images where n is the number of subjects and
 #'  each column corresponds to an imaging covariate. Currently, not supported.
@@ -43,13 +44,17 @@
 #' @importFrom RNifti writeNifti readNifti
 #' @importFrom parallel mclapply
 #' @importFrom PDQutils papx_edgeworth
+#' @importFrom Matrix bdiag
 #' @export
 #' @example inst/examples/lmPBJ.R
-lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL,
-Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none', 'f', 'edgeworth'), outdir=NULL, zeros=FALSE, HC3=TRUE, mc.cores = getOption("mc.cores", 2L)){
+lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_structure="independent",
+                 Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('none', 't', 'f', 'edgeworth'),
+                 outdir=NULL, zeros=FALSE, HC3=TRUE, mc.cores = getOption("mc.cores", 2L)){
+
   # hard coded epsilon for rounding errors in computing hat values
   eps=0.001
   transform = tolower(transform[1])
+  # N = length(unique(id)) # number of total subjects
 
   X = getDesign(form, formred, data=data)
   Xred = X[['Xred']]
@@ -57,9 +62,8 @@ Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none',
   images = images[X[['nas']] ]
   X = X[['X']]
   if(nrow(X) < nrow(data)){
-    message(nrow(data)-nrow(X), ' observations deleted due to missingness.')
+    message(nrow(data)-nrow(X), 'observations deleted due to missingness.')
   }
-
 
   n = nrow(X)
   if(class(images[[1]])[1] != 'niftiImage'){
@@ -78,6 +82,7 @@ Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none',
   if(is.character(W)){
     stop('Image valued weights are not supported.')
   }
+
   # check if inverse weights are given
   if(is.null(Winv)){
     Winv = FALSE
@@ -123,59 +128,150 @@ Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none',
 
   # assumes column names in X which aren't in Xred are of interest.
   peind = which(!colnames(X) %in% colnames(Xred))
-  rdf = n - ncol(X) # this is true unless X is rank deficient
+  # rdf = N - ncol(X) # this is true unless X is rank deficient
+  rdf = n - ncol(X)
+  m = ncol(X)
 
   # inverse weights were passed
   if(Winv) W[W!=0] = 1/W[W!=0]
+
+  # reorder everything by id
+  if(!is.null(id)){
+    X = X[order(id),, drop=FALSE]
+    Xred = Xred[order(id),, drop=FALSE]
+    Y = Y[order(id),, drop=FALSE]
+    W = W[order(id)]
+  }
+  id = sort(id)
+
   # w is returned in output
   w = W
   X1 = X[,peind]
   W = sqrt(W)
-  # this is a pointwise matrix multiplication if W was passed as images
-  Y = Y * W
+  # this is a point wise matrix multiplication if W was passed as images
+  # Y = Y * W
 
   # fit model to all image data
   QR = qr(X * W)
-  coef = qr.coef(QR, Y)[peind,,drop=FALSE]
-  res=qr.resid(QR, Y);
+  # coef = qr.coef(QR, Y * W)[peind,,drop = FALSE]    # coef of X1
+  coef = qr.coef(QR, Y * W)  # coef of X = [X0, X1]
+  res = qr.resid(QR, Y * W) # residual
   X1res = qr.resid(qr(Xred * W), X1 * W)
 
+  # model fitting for different W structure
+  if(W_structure == "independent"){
+    # coef0 = NULL # record the coefficients before estimating rho
+    summary_rho = 0
+    rho = NULL
+    Y = Y * W
+    W = diag(W)
+  }else if(W_structure == "exchangeable"){
+    # coef0 = coef
 
-  if(!robust){
+    # split observations by id
+    grouped_id = split(seq(nrow(Y)), sort(id))
+    # estimate variance of residual
     sigmas = sqrt(colSums(res^2)/rdf)
-    AsqrtInv = backsolve(r=qr.R(qr(X1res)), x=diag(df) )
-    sqrtSigma = crossprod(AsqrtInv, matrix(X1res, nrow=df, ncol=n, byrow=TRUE))
-    # used to compute chi-squared statistic
-    normedCoef = sweep(sqrtSigma %*% Y, 2, sigmas, FUN='/') # sweep((AsqrtInv%*% coef), 2, sigmas, FUN='/') #
-    # In this special case only the residuals vary across voxels, so sqrtSigma can be obtained from the residuals
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=X*W, W=w, n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform)
-    rm(AsqrtInv, Y, res, sigmas, X1res)
-  } else {
-    # first part of normedCoef
-    normedCoef = colSums(sweep(simplify2array(rep(list(Y), df)), MARGIN = c(1,3), STATS = X1res, FUN = '*'), dims=1)
-    if(HC3){
-      h=rowSums(qr.Q(QR)^2); h = ifelse(h>=1, 1-eps, h)
-      X1resQ = sweep(simplify2array(rep(list(res/(1-h)), df)),  c(1,3), X1res, '*')
-    } else {
-      # returns nXVXm_1 array
-      X1resQ = sweep(simplify2array(rep(list(res), df)),  c(1,3), X1res, '*')
-    }
-    if(!is.null(id)){
-      id = factor(id)
-      IDmat = model.matrix(~-1+id)
-      id = as.integer(id)
-      X1resQ = array(apply(X1resQ, 3, function(mat) crossprod(IDmat, mat)), dim=c(ncol(IDmat), V, df))
-    }
-    # apply across voxels. returns V X m_1^2 array
-    BsqrtInv = matrix(apply(X1resQ, 2, function(x){ backsolve(r=qr.R(qr(x)), x=diag(df)) }), nrow=df^2, ncol=V)
-    #assign('BsqrtInvlmPBJ', BsqrtInv, envir = .GlobalEnv)
-    # second part of normedCoef
-    normedCoef = matrix(simplify2array( lapply(1:V, function(ind) crossprod(matrix(BsqrtInv[,ind], nrow=df, ncol=df), normedCoef[ind,])) ), nrow=df)
-    #assign('normedCoeflmPBJ', normedCoef, envir = .GlobalEnv)
-    # Things needed to resample the robust statistics
-    sqrtSigma = list(res=res, X1res=as.matrix(X1res), QR=QR, XW=X*W, W=w, n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id)
-    rm(BsqrtInv, Y, res, X1resQ, X1res)
+    # standardized residual
+    stand_res = sweep(res, 2, sigmas, FUN ='/')
+    # estimate rho
+    ni_list = sapply(grouped_id, length) # number of observations for each id
+    denominator = sum(ni_list * (ni_list - 1)/2) - ncol(X)  # denominator of the formula
+
+    numerator_per_id = sapply(grouped_id, function(y) { # compute the difference in numerator for each sub-residual matrix
+      x = stand_res[y, ]
+      if (is.matrix(x) || is.data.frame(x)) {
+        return(((colSums(x))^2 - colSums(x^2))/2)
+      } else {
+        return(0) # when there's only one observation for some id
+      }
+    }, simplify = "matrix")
+    rho_numerator = Reduce('+', numerator_per_id) # summation across ids
+    rho = rho_numerator / denominator
+    summary_rho = mean(rho) # mean value as the summary
+
+    # close form of square root of the inversed correlation matrix
+    Cinv_sqrt = bdiag(lapply(ni_list, function(x) {
+      if(x==1){
+        inv_sqrt_matrix = 1
+      }else{
+        a = 1/(1-summary_rho)
+        b = a * (-summary_rho/(1+(x-1)*summary_rho))
+        Cinv = a *  diag(rep(1,x), ncol=x) +
+          b * c(rep(1, x)) %*% t(c(rep(1, x)))
+        D = diag(c(rep(a, x-1), a+x*b))
+        Dsqrt = diag(sqrt(c(rep(a, x-1), a+x*b)))
+        U = matrix(0, nrow = x, ncol = x)
+        U[, x] = rep(-1/sqrt(x), x)
+
+        for (i in 1:(x-1)) {
+          U[1:i, i] = 1
+          U[i+1, i] = -i
+          U[, i] = U[, i] / sqrt(sum(U[, i]^2))
+        }
+        inv_sqrt_matrix = U %*% Dsqrt %*% t(U)
+      }
+      return(inv_sqrt_matrix)
+    }))
+
+    W = as.matrix(Cinv_sqrt %*% diag(as.numeric(W))) # new weight in the second iteration
+
+    # refit model to all image data
+    QR = qr(W %*% X)
+    Y = as.matrix(W %*% Y)
+    # coef = qr.coef(QR, Y)[peind,,drop = FALSE]
+    coef = qr.coef(QR, Y)
+    res = qr.resid(QR, Y)
+    X1res = qr.resid(qr(W %*% Xred), W %*% X1)
+  }else{
+    stop('Error: W_structure must be "independent" or "exchangeable".')
   }
+
+  # we use non-robust estimator under exchangeable structure
+  if (W_structure == "exchangeable" && robust == FALSE) {
+    stop('When W_structure is "exchangeable", robust has to be TRUE.')
+  }
+
+  if(HC3 & robust){
+    h=rowSums(qr.Q(QR)^2); h = ifelse(h>=1, 1-eps, h)
+    X1resQ = sweep(simplify2array(rep(list(res/(1-h)), df)),  c(1,3), X1res, '*')
+  } else {
+    HC3 = FALSE
+    # returns nXVXm_1 array
+    h=rep(0, n)
+    X1resQ = sweep(simplify2array(rep(list(res), df)),  c(1,3), X1res, '*')
+  }
+
+  if(!is.null(id)){
+    id = factor(id)
+    IDmat = model.matrix(~-1+id)
+    id = as.integer(id)
+    X1resQ = array(apply(X1resQ, 3, function(mat) crossprod(IDmat, mat)), dim=c(ncol(IDmat), V, df))
+    nsub = length(unique(id))
+  }else{
+    nsub = nrow(X)
+  }
+
+
+  # Things needed to resample the robust statistics
+  sqrtSigma = list(res=Y, X1res=as.matrix(X1res), X1W=W %*% X1, XredW=W %*% Xred, QR=QR, XW=W %*% X, W=w, coef=coef, rho_avg = summary_rho, rho = rho,
+                   n=n, df=df, rdf=rdf, robust=robust, HC3=HC3, transform=transform, id=id, nsub=nsub, m=m)
+
+    # Computes test statistic
+  if(robust){
+    normedCoef = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+  } else {
+    sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
+    sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
+    # this could be performed outside of the bootstrap function
+    AsqrtInv = backsolve(r=qr.R(qr(sqrtSigma$X1res)), x=diag(df) )
+    normedCoef = crossprod(AsqrtInv, matrix(sqrtSigma$X1res, nrow=df, ncol=n, byrow=TRUE))
+    # used to compute chi-squared statistic
+    normedCoef = normedCoef %*% sqrtSigma$res
+  }
+  sqrtSigma$res = res
+  # warnings due to BsqrtInv only existing under some settings
+  # suppressWarnings(rm(BsqrtInv,X1resQ, AsqrtInv, Y, res, sigmas, X1res))
 
   # use transform to compute chi-squared statistic
   normedCoef = switch(transform,
@@ -187,12 +283,12 @@ Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none',
                       })
   stat = colSums(normedCoef^2)
   if(transform=='f'){
-    stat = qchisq(pf(stat/df, df1=df, df2=rdf, log.p = TRUE ), df=df, log.p=TRUE )
+    stat = qchisq(pf(stat/df, df1=df, df2=rdf, log.p = TRUE), df=df, log.p=TRUE )
   }
 
-
   # used later to indicated t-statistic
-  out = list(stat=stat, coef=coef, normedCoef=normedCoef, sqrtSigma=sqrtSigma, mask=mask, template=template, images=images, formulas=list(full=form, reduced=formred), data = get_all_vars(form, data = data))
+  out = list(stat=stat, normedCoef=normedCoef, sqrtSigma=sqrtSigma, mask=mask, template=template,
+             images=images, formulas=list(full=form, reduced=formred), data = get_all_vars(form, data = data))
   class(out) = c('statMap', 'list')
 
   # if outdir is specified the stat and sqrtSigma images are saved in outdir
@@ -200,7 +296,6 @@ Winv=NULL, template=NULL, formImages=NULL, robust=TRUE, transform=c('t', 'none',
   if(!is.null(outdir)){
     files = write.statMap(out, outdir)
     out$stat = files$stat
-    out$coef = files$coef
     out$sqrtSigma = files$sqrtSigma
     # if mask was a character then pass that forward instead if the niftiImage
     if(exists('maskimg'))

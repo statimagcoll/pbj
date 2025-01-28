@@ -48,9 +48,9 @@ Imports:
   pTFCE,
   RESI,
   RNifti,
-  scales,
   sandwich,
-  utils
+  utils,
+  Matrix
 RoxygenNote: 7.2.3
 Suggests: 
     fslr,
@@ -59,7 +59,6 @@ Suggests:
     lmtest,
     pain21,
     rmarkdown,
-    sandwich,
     testthat
 Remotes:
   simonvandekar/pain21,

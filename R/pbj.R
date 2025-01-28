@@ -163,3 +163,69 @@ mmeStat = function(stat, rois=FALSE, mask, cft, maxima=FALSE, CMI=FALSE,
   }
   res
 }
+
+
+#' Performs one bootstrap for RESI confidence set construction
+#'
+#' @param stat bootstrap value of the test statistic image. It is a nifti image array.
+#' @param Shat The RESI estimate computed in the observed data.
+#' @param n The sample size/ number of independent sampling units.
+#' @param df Numerator degrees of freedom
+#' @param rdf Denominator degrees of freedom
+#' @param normMethod The value used to normalize the test statistic in each
+#'  bootstrap. "param" means it's estimated assuming the test
+#'  statistic if F-distributed. "none" means no scaling. "param" is the default.
+#' @param mask Mask image identifying where measurements were taken in the image.
+#' @export
+#'
+resics = function (stat, Shat, nsub, df, m, normMethod = c("param", "none"), mask)
+{
+  # lambda_b = stat[mask != 0]
+  # stat = sqrt(lambda_b/n)
+  es_boot = RESI::chisq2S(chisq = stat[mask != 0], n = nsub, df = df)
+  lambda = nsub*es_boot^2
+  SD = switch(normMethod,
+              "none"=1,
+              # asymptotic variance of sqrt(n) Shat
+              "param" = sqrt(es_boot^2/2 + 1))
+  # assumes sample size is the same at all locations
+  boots = (es_boot - Shat)/SD
+  w_max = max(boots, na.rm = T)
+  w_min = min(boots, na.rm = T)
+  # return(list(w_min, w_max, stat))
+  return(c(w_min, w_max))
+}
+
+
+#' Uses bootstrap results to construct simultaneous confidence intervals.
+#'
+#' @param statmap The statMap object returned by lmPBJ using the `resics` function.
+#' @param alpha The function returns 1-alpha simultaneous confidence intervals.
+#' @export
+#'
+sci <- function(statmap, alpha){
+  normMethod = statmap$pbj$statArgs$normMethod
+  a = do.call(rbind, statmap$pbj$boots)
+  w_min_vec = a[,1]
+  w_max_vec = a[,2]
+  # n <- statmap$sqrtSigma$n
+  # the observed test statistic image
+  lambda = statmap$stat
+  # res = sqrt(lambda/n)
+  nsub = statmap$sqrtSigma$nsub
+  m = statmap$sqrtSigma$m
+  es_est = RESI::chisq2S(chisq = statmap$stat, n = nsub,
+                         df = statmap$sqrtSigma$df)
+  df = statmap$sqrtSigma$df
+  # rdf = statmap$sqrtSigma$rdf
+  cu = quantile(w_max_vec, 1 - alpha / 2)
+  cl = quantile(w_min_vec, alpha / 2)
+
+  SD = switch(normMethod,
+              "none"=1,
+              # asymptotic variance of Shat
+              "param" = sqrt(es_est^2/2 + 1))
+  statmap$SCI = data.frame('SLCI'= es_est - cu*SD, 'SUCI' = es_est - cl*SD)
+  #statmap$SCI <- data.frame('SLCI'=res + cl*SD, 'SUCI' = res + cu*SD)
+  return(statmap)
+}
