@@ -273,6 +273,9 @@ lmPBJ = function(images, form, formred=~1, mask, id=NULL, data=NULL, W=NULL, W_s
   # warnings due to BsqrtInv only existing under some settings
   # suppressWarnings(rm(BsqrtInv,X1resQ, AsqrtInv, Y, res, sigmas, X1res))
 
+  # SNV: added because matrix square root in not unique and the sign can be different from coef before computing stat
+  normedCoef = sign(coef[peind,]) * abs(normedCoef)
+
   # use transform to compute chi-squared statistic
   normedCoef = switch(transform,
                       none=normedCoef,

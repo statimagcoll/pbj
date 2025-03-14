@@ -4,24 +4,24 @@
 \alias{resics}
 \title{Performs one bootstrap for RESI confidence set construction}
 \usage{
-resics(stat, Shat, n, df, rdf, normMethod = c("param", "none"), mask)
+resics(stat, Shat, nsub, df, m, normMethod = c("param", "none"), mask)
 }
 \arguments{
 \item{stat}{bootstrap value of the test statistic image. It is a nifti image array.}
 
 \item{Shat}{The RESI estimate computed in the observed data.}
 
-\item{n}{The sample size/ number of independent sampling units.}
-
 \item{df}{Numerator degrees of freedom}
-
-\item{rdf}{Denominator degrees of freedom}
 
 \item{normMethod}{The value used to normalize the test statistic in each
 bootstrap. "param" means it's estimated assuming the test
 statistic if F-distributed. "none" means no scaling. "param" is the default.}
 
 \item{mask}{Mask image identifying where measurements were taken in the image.}
+
+\item{n}{The sample size/ number of independent sampling units.}
+
+\item{rdf}{Denominator degrees of freedom}
 }
 \description{
 Performs one bootstrap for RESI confidence set construction
