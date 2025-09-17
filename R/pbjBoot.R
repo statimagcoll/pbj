@@ -26,7 +26,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     Hmat = sqrtSigma$XW %*% XtX_inv %*% t(sqrtSigma$XW)
     Rmat = diag(n) - Hmat
     sqrtSigma$Rmat = Rmat
-    h = rep(NA, n)  # not used in longitudinal case
+    h = rep(0, n)  # not used in longitudinal case
   } else if (HC3) {
     h = rowSums(qr.Q(sqrtSigma$QR)^2)
     h = ifelse(h >= 1, 1 - eps, h)
@@ -125,13 +125,22 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
 
   # robust estimator or not
   if(robust){
-    if (method == 'nonparametric') {
-      h = h[samp]
-      # Generate new id vector matching resampled structure
-      # id = rep(1:length(unique(id)), unlist(lapply(sampleID, function(x) table(id)[[as.character(x)]])))
-      id = id_boot
+    if (is.null(id)) {
+      # cross-sectional
+      if (method == 'nonparametric') {
+        h = h[samp]
+      }
+    }else{
+      # longitudinal: h is not used
+      h = rep(0, nrow(sqrtSigma$res))
+      if (method == 'nonparametric') {
+        # Generate new id vector matching resampled structure
+        # id = rep(1:length(unique(id)), unlist(lapply(sampleID, function(x) table(id)[[as.character(x)]])))
+        id = id_boot
+      }
     }
-    statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+  statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
+
   } else {
     sigmas = sqrt(colSums(qr.resid(sqrtSigma$QR, sqrtSigma$res)^2)/(rdf))
     sqrtSigma$res = sweep(sqrtSigma$res, 2, sigmas, FUN = '/')
