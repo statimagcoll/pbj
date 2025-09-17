@@ -36,7 +36,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
 
 
   if(!is.null(id)){ # For longitudinal data
-    grouped_id = split(1:n, sort(id))
+    grouped_id = split(1:n, id)
 
     if(method=='wild'){
       if (HC3) {
@@ -56,15 +56,19 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     }else if(method=='permutation'){
       # Permute within each cluster (HC3 not used here)
       sampleIndex = unlist(sapply(grouped_id, function(x) {
-        if(length(x) == 1) x else sample(x, size = length(x), replace = TRUE)
+        if(length(x) == 1) x else sample(x, size = length(x), replace = FALSE)
       }))
       sqrtSigma$res = sqrtSigma$res[sampleIndex, ]
 
 
     } else if (method=='nonparametric'){ # sample within and between clusters
       # Resample clusters and apply R-based correction if HC3
-      sampleID = sample(unique(id), size = length(unique(id)), replace=TRUE)
+      sampleID = sample(unique(id), size = length(unique(id)), replace = TRUE)
       samp = unlist(lapply(sampleID, function(x) grouped_id[[as.character(x)]])) # collect observations by sampled ID
+
+      lens    = vapply(sampleID, function(x) length(grouped_id[[as.character(x)]]), integer(1))
+      id_boot = rep(seq_along(sampleID), times = lens)
+      n_boot  = length(samp)
 
       sqrtSigma$res = sqrtSigma$res[samp, , drop = FALSE]
       sqrtSigma$X1W = sqrtSigma$X1W[samp, , drop = FALSE]
@@ -73,15 +77,22 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
       sqrtSigma$XW = sqrtSigma$XW[samp, , drop = FALSE]
       sqrtSigma$QR = qr(sqrtSigma$XW)
 
+      grouped_id_boot = split(seq_len(n_boot), id_boot)
+
+
       if (HC3) {
         # Recompute R matrix for bootstrap sample
-        n_boot = nrow(sqrtSigma$XW)
-        XtX_inv = solve(t(sqrtSigma$XW) %*% sqrtSigma$XW)
+        XtX <- t(sqrtSigma$XW) %*% sqrtSigma$XW
+        XtX_inv <- tryCatch(solve(XtX),
+                            error = function(e) {
+                              if (!requireNamespace("MASS", quietly = TRUE)) stop("Need MASS::ginv or full rank XtX")
+                              MASS::ginv(XtX)
+                            })
+
         Hmat = sqrtSigma$XW %*% XtX_inv %*% t(sqrtSigma$XW)
         Rmat = diag(n_boot) - Hmat
         sqrtSigma$Rmat = Rmat
 
-        grouped_id_boot = split(1:n_boot, rep(1:length(unique(id)), each = length(samp)/length(unique(id))))
         for (i in seq_along(grouped_id_boot)) {
           idx = grouped_id_boot[[i]]
           Ri = Rmat[idx, idx, drop = FALSE]
@@ -117,7 +128,8 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
     if (method == 'nonparametric') {
       h = h[samp]
       # Generate new id vector matching resampled structure
-      id = rep(1:length(unique(id)), unlist(lapply(sampleID, function(x) table(id)[[as.character(x)]])))
+      # id = rep(1:length(unique(id)), unlist(lapply(sampleID, function(x) table(id)[[as.character(x)]])))
+      id = id_boot
     }
     statimg = .Call("pbj_pbjBootRobustX", sqrtSigma$QR, sqrtSigma$res, sqrtSigma$X1res, id, h, df)
   } else {
