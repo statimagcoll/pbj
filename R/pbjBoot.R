@@ -75,7 +75,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
 
       if (HC3) {
         # Recompute R matrix for bootstrap sample
-        n_boot = nrow(X)
+        n_boot = nrow(sqrtSigma$XW)
         XtX_inv = solve(t(sqrtSigma$XW) %*% sqrtSigma$XW)
         Hmat = sqrtSigma$XW %*% XtX_inv %*% t(sqrtSigma$XW)
         Rmat = diag(n) - Hmat
