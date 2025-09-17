@@ -78,7 +78,7 @@ pbjBoot = function(sqrtSigma, rboot=function(n){ (2*stats::rbinom(n, size=1, pro
         n_boot = nrow(sqrtSigma$XW)
         XtX_inv = solve(t(sqrtSigma$XW) %*% sqrtSigma$XW)
         Hmat = sqrtSigma$XW %*% XtX_inv %*% t(sqrtSigma$XW)
-        Rmat = diag(n) - Hmat
+        Rmat = diag(n_boot) - Hmat
         sqrtSigma$Rmat = Rmat
 
         grouped_id_boot = split(1:n_boot, rep(1:length(unique(id)), each = length(samp)/length(unique(id))))
