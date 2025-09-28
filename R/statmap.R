@@ -147,13 +147,13 @@ stat.statMap = function(x, method=c('p', 'S', 'chisq')){
     if(method=='s'){
       res = chisq2S(res, x$sqrtSigma$df, x$sqrtSigma$n)
       if(x$sqrtSigma$df==1){
-        res = res * sign(x$sqrtSigma$coef)
+        res = res * sign(x$sqrtSigma$coef[which(!colnames(x$sqrtSigma$XW) %in% colnames(x$sqrtSigma$XredW))])
       }
     }
     if(method == 'p'){
       res = -pchisq(res, df = x$sqrtSigma$df, lower.tail=FALSE, log.p=TRUE)/log(10)
       if(x$sqrtSigma$df==1){
-        res = res * sign(x$sqrtSigma$coef)
+        res = res * sign(x$sqrtSigma$coef[which(!colnames(x$sqrtSigma$XW) %in% colnames(x$sqrtSigma$XredW))])
       }
     }
     stat[ stat!=0] = res
