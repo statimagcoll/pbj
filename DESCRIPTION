@@ -22,7 +22,7 @@ Description: These parametric bootstrap joint (PBJ) inference procedures are des
 Encoding: UTF-8
 License: GPL-3
 LazyData: true
-Depends: R (>= 3.3)
+Depends: R (>= 4.4)
 Collate:
     'addSignal.R'
     'cluster_functions.R'
@@ -51,7 +51,7 @@ Imports:
   sandwich,
   utils,
   Matrix
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Suggests: 
     fslr,
     geepack,

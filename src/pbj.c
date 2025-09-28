@@ -23,31 +23,6 @@ static SEXP pbj_getListElement(SEXP list, const char *str) {
 }
 
 SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP df) {
-  /* Reproduce this:
-
-    rsd <- qr.resid(sqrtSigma$QR, sqrtSigma$res)
-    rsd <- sweep(rsd, 1, 1-h, '/')
-    baz <- rep(list(rsd), df)
-    qux <- simplify2array(baz)
-    corge <- sweep(qux, c(1,3), sqrtSigma$X1res, '*')
-    grault <- function(x){
-      a <- qr.R(qr(x))
-      b <- diag(ncol(x))
-      backsolve(r=a, x=b)
-    }
-    garply <- apply(corge, 2, grault)
-    BsqrtInv <- matrix(garply, nrow=df^2, ncol=V)
-
-    foo <- function(ind) {
-      bar <- crossprod(sqrtSigma$X1res, sqrtSigma$res[,ind])
-      baz <- matrix(BsqrtInv[,ind], nrow=df, ncol=df)
-      crossprod(baz, bar)
-    }
-    qux <- lapply(1:V, foo)
-    corge <- simplify2array(qux, higher=TRUE)
-    statimg <- matrix(corge, nrow=df, ncol=V)
-  */
-
   SEXP qr_qr, qr_qraux, elt, attr, dim, statimg;
   int *dim_ii, arr_idx_i, idval_i, k_i, n_i, ny_i, nrow_i, ncol_i, idncol_i,*idmat_ii, row_i, col_i, row2_i, col2_i,
       rsd_idx_i, idmat_idx_i, x1res_idx_i, corge_idx_i, df_i, layer_i, dim_prod_i, x_idx_i,
@@ -172,16 +147,16 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
   }
 
   /* Allocate space for rsd vector */
-  rsd_dd = Calloc(length(res), double);
+  rsd_dd = (double *) R_alloc(length(res), sizeof(double));
 
   /* Make a copy of res, since dqrrsd changes some values in place */
   res_dd = REAL(res);
-  res2_dd = Calloc(length(res), double);
+  res2_dd = (double *) R_alloc(length(res), sizeof(double));
   memcpy(res2_dd, res_dd, length(res) * sizeof(double));
 
   /* rsd <- qr.resid(sqrtSigma$QR, sqrtSigma$res) */
   F77_CALL(dqrrsd)(REAL(qr_qr), &n_i, &k_i, REAL(qr_qraux), res2_dd, &ny_i, rsd_dd);
-  Free(res2_dd);
+  /* No Free needed for R_alloc */
 
   /* rsd <- sweep(rsd, 1, 1-h, '/') */
   h_dd = REAL(h);
@@ -194,7 +169,7 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
   }
 
   /* Allocate space for corge vector */
-  corge_dd = Calloc(length(res) * df_i, double);
+  corge_dd = (double *) R_alloc(length(res) * df_i, sizeof(double));
 
   /* baz <- rep(list(rsd), df)
      qux <- simplify2array(baz)
@@ -222,9 +197,7 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
       }
     }
   }
-  Free(rsd_dd);
-
-
+  /* No Free needed for rsd_dd */
 
   /* Check if idmat is null if not multiply with corge_dd */
   if(idmat != R_NilValue){
@@ -243,7 +216,7 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
     }
 
     /* Allocate idres_dd. idncol_i X V X df array*/
-    idres_dd = Calloc(idncol_i * ncol_i * df_i, double);
+    idres_dd = (double *) R_alloc(idncol_i * ncol_i * df_i, sizeof(double));
 
     idmat_idx_i = 0;
     corge_idx_i = 0;
@@ -261,11 +234,9 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
       }
     }
 
-
-
     /* replace corge_dd with idres_dd */
     nrow_i = idncol_i;
-    Free(corge_dd);
+    /* No Free needed for corge_dd, R_alloc memory is auto-freed */
     corge_dd = idres_dd;
     /*
     printf("%u\n", nrow_i);
@@ -284,12 +255,12 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
     }
     garply <- apply(corge, 2, grault)
   */
-  x_dd = Calloc(nrow_i * df_i, double);
-  qraux_dd = Calloc(df_i, double);
-  pivot_ii = Calloc(df_i, int);
-  work_dd = Calloc(df_i * 2, double);
-  a_dd = Calloc(df_sq_i, double);
-  bsqrtinv_dd = Calloc(df_sq_i * ncol_i, double);
+  x_dd = (double *) R_alloc(nrow_i * df_i, sizeof(double));
+  qraux_dd = (double *) R_alloc(df_i, sizeof(double));
+  pivot_ii = (int *) R_alloc(df_i, sizeof(int));
+  work_dd = (double *) R_alloc(df_i * 2, sizeof(double));
+  a_dd = (double *) R_alloc(df_sq_i, sizeof(double));
+  bsqrtinv_dd = (double *) R_alloc(df_sq_i * ncol_i, sizeof(double));
 
   dim_prod_i = ncol_i * nrow_i;
   bsqrtinv_idx_i = 0;
@@ -349,12 +320,7 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
 
     bsqrtinv_idx_i += df_sq_i;
   }
-  Free(corge_dd);
-  Free(x_dd);
-  Free(qraux_dd);
-  Free(pivot_ii);
-  Free(work_dd);
-  Free(a_dd);
+  /* No Free needed for corge_dd, x_dd, qraux_dd, pivot_ii, work_dd, a_dd */
 
   /*
     foo <- function(ind) {
@@ -367,7 +333,7 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
   statimg = PROTECT(allocMatrix(REALSXP, df_i, ncol_i));
   statimg_dd = REAL(statimg);
 
-  x_dd = Calloc(df_i, double);
+  x_dd = (double *) R_alloc(df_i, sizeof(double));
   for (col_i = 0; col_i < ncol_i; col_i++) {
     /* bar <- crossprod(sqrtSigma$X1res, sqrtSigma$res[,ind]) */
     one_d = 1.0;
@@ -388,8 +354,7 @@ SEXP pbj_pbjBootRobustX(SEXP qr, SEXP res, SEXP x1res, SEXP idmat, SEXP h, SEXP 
     F77_CALL(dgemv)("T", &df_i, &df_i, &one_d, bsqrtinv_dd + (col_i * df_sq_i),
         &df_i, x_dd, &one_i, &zero_d, statimg_dd + (col_i * df_i), &one_i FCONE);
   }
-  Free(x_dd);
-  Free(bsqrtinv_dd);
+  /* No Free needed for x_dd, bsqrtinv_dd */
   UNPROTECT(1); /* statimg */
 
   return statimg;
