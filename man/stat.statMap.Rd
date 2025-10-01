@@ -4,7 +4,7 @@
 \alias{stat.statMap}
 \title{Returns a statistical niftiImage object from a statMap object}
 \usage{
-stat.statMap(x, method = c("p", "S", "chisq"))
+stat.statMap(x, method = c("p", "Z", "S", "chisq"))
 }
 \arguments{
 \item{x}{the statMap object to extract a coefficient niftiImage from}

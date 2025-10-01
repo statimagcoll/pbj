@@ -135,7 +135,7 @@ write.statMap <- function(x, outdir, images=TRUE, sqrtSigma=TRUE, statMethod=c('
 #' stat.statMap(pbjModel2, method='chisq')
 #' stat.statMap(pbjModel2, method='S')
 #'
-stat.statMap = function(x, method=c('p', 'S', 'chisq')){
+stat.statMap = function(x, method=c('p', 'Z', 'S', 'chisq')){
   method = tolower(method[1])
   if(is.character(x$stat)){
     stat = readNifti(x$stat)
@@ -155,6 +155,12 @@ stat.statMap = function(x, method=c('p', 'S', 'chisq')){
       if(x$sqrtSigma$df==1){
         res = res * sign(x$sqrtSigma$coef[which(!colnames(x$sqrtSigma$XW) %in% colnames(x$sqrtSigma$XredW))])
       }
+    }
+      if(method == 'z'){
+        if(x$sqrtSigma$df==1){
+          res = qnorm(pchisq(res, df = x$sqrtSigma$df, lower.tail=FALSE, log.p=TRUE)/2, lower.tail=FALSE )
+          res = res * sign(x$sqrtSigma$coef[which(!colnames(x$sqrtSigma$XW) %in% colnames(x$sqrtSigma$XredW))])
+        } else { stop("Cannot convert chi-square statistics with df>1 to signed Z-statistic.") }
     }
     stat[ stat!=0] = res
   }
