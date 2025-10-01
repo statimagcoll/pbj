@@ -158,8 +158,7 @@ stat.statMap = function(x, method=c('p', 'Z', 'S', 'chisq')){
     }
       if(method == 'z'){
         if(x$sqrtSigma$df==1){
-          res = qnorm(pchisq(res, df = x$sqrtSigma$df, lower.tail=FALSE, log.p=TRUE)/2, lower.tail=FALSE, log.p=TRUE)
-          res = res * sign(x$sqrtSigma$coef[which(!colnames(x$sqrtSigma$XW) %in% colnames(x$sqrtSigma$XredW))])
+          res = sqrt(res) * sign(x$sqrtSigma$coef[which(!colnames(x$sqrtSigma$XW) %in% colnames(x$sqrtSigma$XredW))])
         } else { stop("Cannot convert chi-square statistics with df>1 to signed Z-statistic.") }
     }
     stat[ stat!=0] = res
